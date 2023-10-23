@@ -176,28 +176,19 @@ public class TetrisShape : MonoBehaviour
             }
         }
 
-        // 3. 在所有超出的子物体中，只计算那些 Y 坐标相同的唯一 X 坐标
-        List<float> finalOutOfBoundX = new List<float>();
-        foreach (float x in uniqueOutOfBoundX)
+        // Debug.LogWarning($"uniqueOutOfBoundX : {uniqueOutOfBoundX.Count}");
+        // 3. 根据找到的唯一的 X 坐标数量来推挤方块
+        if (uniqueOutOfBoundX.Count > 0)
         {
-            if (childBlocks.Count(block => Mathf.Approximately(block.transform.position.x, x)) == 1)
-            {
-                finalOutOfBoundX.Add(x);
-            }
-        }
-
-        // 4. 根据找到的唯一的 X 坐标数量来推挤方块
-        if (finalOutOfBoundX.Count > 0)
-        {
-            if (finalOutOfBoundX.Min() <= Gameplay.LeftLimit)
+            if (uniqueOutOfBoundX.Min() <= Gameplay.LeftLimit)
             {
                 // Debug.LogWarning($"Push right for {finalOutOfBoundX.Count} units due to min.x : {finalOutOfBoundX.Min()}");
-                trans.position += Vector3.right * finalOutOfBoundX.Count;
+                trans.position += Vector3.right * uniqueOutOfBoundX.Count;
             }
-            else if (finalOutOfBoundX.Max() >= Gameplay.RightLimit)
+            else if (uniqueOutOfBoundX.Max() >= Gameplay.RightLimit)
             {
                 // Debug.LogWarning($"Push left for {finalOutOfBoundX.Count} units due to max.x : {finalOutOfBoundX.Max()}");
-                trans.position += Vector3.left * finalOutOfBoundX.Count;
+                trans.position += Vector3.left * uniqueOutOfBoundX.Count;
             }
         }
     }
