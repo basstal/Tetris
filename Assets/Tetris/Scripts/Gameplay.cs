@@ -94,16 +94,14 @@ public class Gameplay : MonoBehaviour
         {
             DropATetrisShape();
         }
-
-        CheckDeleteLine();
     }
 
-    public void CheckDeleteLine()
+    public static void CheckDeleteLine()
     {
         // 获得场景中所有的 TetrisCollider 组件
         var allTetrisColliders = FindObjectsOfType<TetrisCollider>();
         // 将它们按照 y 坐标分组
-        var groupedColliders = allTetrisColliders.GroupBy(collider => (int)collider.transform.position.y);
+        var groupedColliders = allTetrisColliders.GroupBy(collider => Mathf.RoundToInt(collider.transform.position.y));
         // 将 groupedColliders 按 y 从小到大排列
         groupedColliders = groupedColliders.OrderBy(group => group.Key);
         // 如果有一组的数量等于 CellWidth 则将这一组 TetrisCollider 移除
@@ -120,11 +118,20 @@ public class Gameplay : MonoBehaviour
                 // 将这一组的所有 TetrisCollider 的 y 坐标向下移动一个单位
                 foreach (var tetrisCollider in allTetrisColliders)
                 {
-                    if (tetrisCollider != null && tetrisCollider.transform.position.y > group.Key)
+                    if (tetrisCollider != null && Mathf.RoundToInt(tetrisCollider.transform.position.y) >= group.Key)
                     {
                         tetrisCollider.transform.position += Vector3.down;
                     }
                 }
+            }
+        }
+
+        // 删除那些 colliders 已经为空的 TetrisShape
+        foreach (var tetrisShape in AllShapes)
+        {
+            if (tetrisShape.colliders.Count == 0)
+            {
+                DestroyImmediate(tetrisShape.gameObject);
             }
         }
     }
@@ -173,5 +180,13 @@ public class Gameplay : MonoBehaviour
         }
 
         currentFallingShape = null;
+    }
+
+    private static bool IsPausing;
+
+    public static void Pause()
+    {
+        IsPausing = !IsPausing;
+        Time.timeScale = IsPausing ? 0 : 1;
     }
 }

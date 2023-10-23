@@ -41,6 +41,8 @@ public class TetrisShape : MonoBehaviour
                 {
                     boxCollider.gameObject.tag = "StoppedTetrisShape";
                 }
+
+                Gameplay.CheckDeleteLine();
             }
         }
     }

@@ -12,6 +12,7 @@ public class InputControl : MonoBehaviour
     public Button upButton;
     public Button resetButton;
     public Button rotateButton;
+    public Button pauseButton;
 
 
     private void Start()
@@ -29,6 +30,7 @@ public class InputControl : MonoBehaviour
                 Gameplay.currentFallingShape.Rotate();
             }
         });
+        pauseButton.onClick.AddListener(Gameplay.Pause);
     }
 
 
