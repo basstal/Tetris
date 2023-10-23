@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using Sirenix.OdinInspector;
 using UnityEngine;
@@ -12,8 +13,8 @@ public class Gameplay : MonoBehaviour
     private Vector2[] shapeData; // 当前形状的数据
     public const int CellWidth = 10;
     public const int CellHeight = 10;
-    public static float LeftLimit = -CellWidth / 2f; // 设置左边界
-    public static float RightLimit = CellWidth / 2f; // 设置右边界
+    public static float LeftLimit = -CellWidth / 2f + 0.5f; // 设置左边界
+    public static float RightLimit = CellWidth / 2f + 0.5f; // 设置右边界
     public InputControl InputControl;
     public static bool GameEnd;
     [NonSerialized] public static TetrisShape currentFallingShape;
@@ -96,6 +97,8 @@ public class Gameplay : MonoBehaviour
         }
     }
 
+    static List<int> DeletedRowPositions = new List<int>();
+
     public static void CheckDeleteLine()
     {
         // 获得场景中所有的 TetrisCollider 组件
@@ -104,24 +107,38 @@ public class Gameplay : MonoBehaviour
         var groupedColliders = allTetrisColliders.GroupBy(collider => Mathf.RoundToInt(collider.transform.position.y));
         // 将 groupedColliders 按 y 从小到大排列
         groupedColliders = groupedColliders.OrderBy(group => group.Key);
-        // 如果有一组的数量等于 CellWidth 则将这一组 TetrisCollider 移除
+        DeletedRowPositions.Clear();
         foreach (var group in groupedColliders)
         {
-            if (group.Count() == CellWidth - 1)
+            // 如果有一组的数量等于 CellWidth 则将这一组 TetrisCollider 移除
+            if (group.Count() == CellWidth)
             {
+                DeletedRowPositions.Add(group.Key);
                 foreach (var tetrisCollider in group)
                 {
                     tetrisCollider.belongsTo.colliders.Remove(tetrisCollider);
                     DestroyImmediate(tetrisCollider.gameObject);
                 }
+            }
+        }
 
-                // 将这一组的所有 TetrisCollider 的 y 坐标向下移动一个单位
-                foreach (var tetrisCollider in allTetrisColliders)
+        // 对所有行进行统计，统计在删除一行以后，原来的行需要向下位移的数量，统计位移数量要按照 groupedColliders 中 group.Key 的值，如果当前行位置大于 group.Key 值则下移一个单位
+        if (DeletedRowPositions.Count > 0)
+        {
+            foreach (var tetrisCollider in allTetrisColliders)
+            {
+                if (tetrisCollider == null)
                 {
-                    if (tetrisCollider != null && Mathf.RoundToInt(tetrisCollider.transform.position.y) >= group.Key)
-                    {
-                        tetrisCollider.transform.position += Vector3.down;
-                    }
+                    continue;
+                }
+
+                var position = tetrisCollider.transform.position;
+                var rowY = Mathf.RoundToInt(position.y);
+                var count = DeletedRowPositions.Count(deletedRowY => deletedRowY < rowY);
+                if (count > 0)
+                {
+                    position += Vector3.down * count;
+                    tetrisCollider.transform.position = position;
                 }
             }
         }

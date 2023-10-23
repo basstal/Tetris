@@ -13,5 +13,5 @@ MonoBehaviour:
   m_Name: YooAssetSettings
   m_EditorClassIdentifier: 
   ManifestFileName: PackageManifest
-  RemoteLoadPath: /Android/1.0.4
+  RemoteLoadPath: /Android/1.0.5
   DefaultPackage: DefaultPackage
