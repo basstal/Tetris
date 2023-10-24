@@ -2,7 +2,8 @@
     "name": "Tetris",
     "rootNamespace": "",
     "references": [
-        "Whiterice"
+        "Whiterice",
+        "Unity.Mathematics"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

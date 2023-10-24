@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Unity.Mathematics;
 using UnityEngine;
 
 public class TetrisShape : MonoBehaviour
@@ -28,8 +29,9 @@ public class TetrisShape : MonoBehaviour
             {
                 if (Gameplay.currentFallingShape == this)
                 {
-                    if (Gameplay.currentFallingShape.bornPos == Gameplay.currentFallingShape.transform.position)
+                    if (math.distance(Gameplay.currentFallingShape.bornPos, Gameplay.currentFallingShape.transform.position) < 0.1f)
                     {
+                        // Debug.LogWarning($" Game end at : {Gameplay.currentFallingShape.name}");
                         Gameplay.GameEnd = true;
                     }
 

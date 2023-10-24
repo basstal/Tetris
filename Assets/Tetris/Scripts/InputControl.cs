@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -39,7 +40,8 @@ public class InputControl : MonoBehaviour
         if (Gameplay.currentFallingShape != null)
         {
             // 如果移动后的左边界没有超过游戏的左边界，并且目标位置没有其他方块，执行移动操作
-            if (Gameplay.currentFallingShape.MaxBounds.min.x - 1 >= Gameplay.LeftLimit && Gameplay.currentFallingShape.CanMove(Vector3.left))
+            var minX = Gameplay.currentFallingShape.MaxBounds.min.x - 1;
+            if ((minX > Gameplay.LeftLimit || Mathf.Approximately(minX, Gameplay.LeftLimit)) && Gameplay.currentFallingShape.CanMove(Vector3.left))
             {
                 Gameplay.currentFallingShape.transform.position += Vector3.left;
             }
@@ -51,7 +53,8 @@ public class InputControl : MonoBehaviour
         if (Gameplay.currentFallingShape != null)
         {
             // 如果移动后的右边界没有超过游戏的右边界，并且目标位置没有其他方块，执行移动操作
-            if (Gameplay.currentFallingShape.MaxBounds.max.x + 1 <= Gameplay.RightLimit && Gameplay.currentFallingShape.CanMove(Vector3.right))
+            var maxX = Gameplay.currentFallingShape.MaxBounds.max.x + 1;
+            if ((maxX <= Gameplay.RightLimit || Mathf.Approximately(maxX, Gameplay.RightLimit)) && Gameplay.currentFallingShape.CanMove(Vector3.right))
             {
                 Gameplay.currentFallingShape.transform.position += Vector3.right;
             }
