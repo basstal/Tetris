@@ -121,3 +121,4 @@ config_*.json
 /Output
 
 .vsconfig
+whiterice*.tar.gz
