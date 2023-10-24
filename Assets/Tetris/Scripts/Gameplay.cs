@@ -2,7 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using Sirenix.OdinInspector;
+using Unity.Mathematics;
 using UnityEngine;
 using Whiterice;
 using Random = UnityEngine.Random;
@@ -77,11 +77,6 @@ public class Gameplay : MonoBehaviour
 
     private void Update()
     {
-        if (GameEnd)
-        {
-            return;
-        }
-
         if (WaitForFinalModify > 0)
         {
             WaitForFinalModify -= Time.deltaTime;
@@ -89,6 +84,11 @@ public class Gameplay : MonoBehaviour
             {
                 currentFallingShape.isStopped = true;
             }
+        }
+
+        if (GameEnd)
+        {
+            return;
         }
 
         if (currentFallingShape == null)
@@ -104,7 +104,7 @@ public class Gameplay : MonoBehaviour
         // 获得场景中所有的 TetrisCollider 组件
         var allTetrisColliders = FindObjectsOfType<TetrisCollider>();
         // 将它们按照 y 坐标分组
-        var groupedColliders = allTetrisColliders.GroupBy(collider => Mathf.RoundToInt(collider.transform.position.y));
+        var groupedColliders = allTetrisColliders.GroupBy(collider => (int)math.round(collider.transform.position.y));
         // 将 groupedColliders 按 y 从小到大排列
         groupedColliders = groupedColliders.OrderBy(group => group.Key);
         DeletedRowPositions.Clear();
@@ -133,7 +133,7 @@ public class Gameplay : MonoBehaviour
                 }
 
                 var position = tetrisCollider.transform.position;
-                var rowY = Mathf.RoundToInt(position.y);
+                var rowY = (int)math.round(position.y);
                 var count = DeletedRowPositions.Count(deletedRowY => deletedRowY < rowY);
                 if (count > 0)
                 {
@@ -153,11 +153,10 @@ public class Gameplay : MonoBehaviour
         }
     }
 
-    [Button]
     public void DropATetrisShape()
     {
         var tetrisShape = CreateShape(Random.Range(0, 7));
-        // Debug.LogWarning($"currentFallingShape : {tetrisShape}");
+        // Debug.LogWarning($"DropATetrisShape : {tetrisShape}", tetrisShape);
         currentFallingShape = tetrisShape;
     }
 
