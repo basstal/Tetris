@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using Unity.Mathematics;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
 public class InputControl : MonoBehaviour
@@ -15,6 +16,46 @@ public class InputControl : MonoBehaviour
     public Button rotateButton;
     public Button pauseButton;
 
+    // assign the actions asset to this field in the inspector:
+    public InputActionAsset actions;
+
+    // private field to store move action reference
+    private InputAction leftAction;
+    private InputAction rightAction;
+    private InputAction downAction;
+    private InputAction fastDownAction;
+    private InputAction rotateAction;
+    private InputAction resetAction;
+
+
+    void Awake()
+    {
+        // find the "move" action, and keep the reference to it, for use in Update
+        var gameplayMap = actions.FindActionMap("gameplay");
+        leftAction = gameplayMap.FindAction("left");
+        leftAction.performed += (context) => { MoveLeft(); };
+        rightAction = gameplayMap.FindAction("right");
+        rightAction.performed += (context) => { MoveRight(); };
+        downAction = gameplayMap.FindAction("down");
+        downAction.performed += (context) => { MoveDown(); };
+        fastDownAction = gameplayMap.FindAction("fastDown");
+        fastDownAction.performed += (context) => { FastDown(); };
+        rotateAction = gameplayMap.FindAction("rotate");
+        rotateAction.performed += (context) => { Rotate(); };
+        resetAction = gameplayMap.FindAction("reset");
+        resetAction.performed += (context) => { ResetGame(); };
+    }
+
+
+    void OnEnable()
+    {
+        actions.FindActionMap("gameplay").Enable();
+    }
+
+    void OnDisable()
+    {
+        actions.FindActionMap("gameplay").Disable();
+    }
 
     private void Start()
     {
@@ -23,19 +64,30 @@ public class InputControl : MonoBehaviour
         rightButton.onClick.AddListener(MoveRight);
         downButton.onClick.AddListener(MoveDown);
         upButton.onClick.AddListener(FastDown);
-        resetButton.onClick.AddListener(Gameplay.ResetGame);
-        rotateButton.onClick.AddListener(() =>
-        {
-            if (Gameplay.currentFallingShape != null)
-            {
-                Gameplay.currentFallingShape.Rotate();
-            }
-        });
-        pauseButton.onClick.AddListener(Gameplay.Pause);
+        resetButton.onClick.AddListener(ResetGame);
+        rotateButton.onClick.AddListener(Rotate);
+        pauseButton.onClick.AddListener(Pause);
     }
 
+    public void ResetGame()
+    {
+        Gameplay.ResetGame();
+    }
 
-    void MoveLeft()
+    public void Pause()
+    {
+        Gameplay.Pause();
+    }
+
+    public void Rotate()
+    {
+        if (Gameplay.currentFallingShape != null)
+        {
+            Gameplay.currentFallingShape.Rotate();
+        }
+    }
+
+    public void MoveLeft()
     {
         if (Gameplay.currentFallingShape != null)
         {
@@ -48,7 +100,7 @@ public class InputControl : MonoBehaviour
         }
     }
 
-    void MoveRight()
+    public void MoveRight()
     {
         if (Gameplay.currentFallingShape != null)
         {
@@ -62,7 +114,7 @@ public class InputControl : MonoBehaviour
     }
 
 
-    void MoveDown()
+    public void MoveDown()
     {
         if (Gameplay.currentFallingShape == null || !Gameplay.currentFallingShape.CanMove(Vector3.down))
         {
@@ -74,7 +126,7 @@ public class InputControl : MonoBehaviour
     }
 
 
-    void FastDown()
+    public void FastDown()
     {
         if (Gameplay.currentFallingShape != null)
         {
