@@ -14,4 +14,4 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   download: 1
   configJsonPath: C:\Users\wjk\Documents\GitHub\Tetris\config_Android_0.json
-  buildOptionsAdded: 0
+  buildOptionsAdded: 1
