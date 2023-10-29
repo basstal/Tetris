@@ -12,10 +12,11 @@ public class TetrisShape : MonoBehaviour
     public const float Intervals = 1;
 
     public float intervalCounter = 0;
-    public bool _isStopped;
+    private bool _isStopped;
     public Vector3 bornPos;
     public List<TetrisCollider> colliders = new List<TetrisCollider>();
     [NonSerialized] public int RotateThreshold;
+    public bool isPredictor;
 
     public bool isStopped
     {
@@ -27,6 +28,9 @@ public class TetrisShape : MonoBehaviour
             _isStopped = value;
             if (beStopped)
             {
+                DestroyImmediate(Gameplay.predictionShape.gameObject);
+                Gameplay.predictionShape = null;
+
                 if (Gameplay.currentFallingShape == this)
                 {
                     if (math.distance(Gameplay.currentFallingShape.bornPos, Gameplay.currentFallingShape.transform.position) < 0.1f)
@@ -44,14 +48,14 @@ public class TetrisShape : MonoBehaviour
                     boxCollider.gameObject.tag = "StoppedTetrisShape";
                 }
 
-                Gameplay.CheckDeleteLine();
+                Gameplay.Instance.CheckDeleteLine();
             }
         }
     }
 
     private void Update()
     {
-        if (isStopped)
+        if (isStopped || isPredictor)
         {
             return;
         }
@@ -64,6 +68,21 @@ public class TetrisShape : MonoBehaviour
         }
     }
 
+
+    public void UpdatePredictor(TetrisShape other)
+    {
+        var transform1 = other.transform;
+        // Debug.LogWarning($"update transform : {transform.name}");
+        var transform2 = transform;
+        transform2.position = transform1.position;
+        transform2.rotation = transform1.rotation;
+        // Physics.SyncTransforms();
+        var minDistance = InputControl.FindFastDownDistance(this);
+        if (minDistance > 0)
+        {
+            transform2.position += Vector3.down * (minDistance - 0.5f); // 0.5f为Box的半高，确保方块底部与目标表面对齐
+        }
+    }
 
     public void DownOneCell()
     {
@@ -113,20 +132,22 @@ public class TetrisShape : MonoBehaviour
         return true;
     }
 
-    public void Rotate()
+    public bool Rotate(bool force = false)
     {
         var trans = transform;
         var defaultRotation = trans.rotation;
         var changeToRotation = new Quaternion();
         changeToRotation.eulerAngles = new Vector3(0, 0, (defaultRotation.eulerAngles.z + 90) % RotateThreshold);
         trans.rotation = changeToRotation;
-        if (ColliderWithAny())
+
+        if (!force && ColliderWithAny())
         {
             trans.rotation = defaultRotation;
-            return;
+            return false;
         }
 
         CheckAndPushAfterRotation(trans);
+        return true;
     }
 
     bool ColliderWithAny()
@@ -158,7 +179,7 @@ public class TetrisShape : MonoBehaviour
         List<BoxCollider> childBlocks = new List<BoxCollider>();
 
         // 1. 获取所有子物体
-        foreach (BoxCollider child in Gameplay.currentFallingShape.transform.GetComponentsInChildren<BoxCollider>())
+        foreach (BoxCollider child in trans.GetComponentsInChildren<BoxCollider>())
         {
             childBlocks.Add(child);
         }

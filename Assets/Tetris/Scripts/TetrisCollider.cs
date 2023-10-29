@@ -1,20 +1,35 @@
 ﻿using System;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 public class TetrisCollider : MonoBehaviour
 {
-    public TetrisShape belongsTo;
-
+    [HideInInspector] public TetrisShape belongsTo;
+    [HideInInspector] public bool toBeDelete;
+#if DEBUG
+    public Vector3 cachedPos;
+#endif
     public void Start()
     {
         var colliderComponent = gameObject.AddComponent<BoxCollider>();
         colliderComponent.size = Vector3.one * 2;
+#if DEBUG
+
+        cachedPos = transform.localPosition;
+#endif
     }
 
     private void Update()
     {
-        if (belongsTo.isStopped)
+        if (belongsTo.isStopped || belongsTo.isPredictor)
             return; // 如果已经停止，则直接返回
+#if DEBUG
+
+        if (cachedPos != transform.localPosition)
+        {
+            Debug.LogError($"???? should not run here");
+        }
+#endif
         if (CheckContactGroundOrOtherShape(Vector3.down) && Gameplay.WaitForFinalModify <= 0)
         {
             Gameplay.WaitForFinalModify = 1;
