@@ -3,7 +3,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Unity.Mathematics;
-using UnityEditor.VersionControl;
 using UnityEngine;
 using UnityEngine.VFX;
 using Whiterice;
@@ -30,20 +29,18 @@ public class Gameplay : MonoBehaviour
 
 
     // 以下是7种不同的方块形状的数据
-    private static readonly Vector2[][] ShapePositions = new Vector2[][]
-    {
-        new Vector2[] { new Vector2(-1, 0), new Vector2(0, 0), new Vector2(1, 0), new Vector2(2, 0) }, // I
-        new Vector2[] { new Vector2(-0.5f, -0.5f), new Vector2(0.5f, -0.5f), new Vector2(-0.5f, 0.5f), new Vector2(0.5f, 0.5f) }, // O
-        new Vector2[] { new Vector2(-1, 0), new Vector2(0, 0), new Vector2(1, 0), new Vector2(0, 1) }, // T
-        new Vector2[] { new Vector2(0, -1), new Vector2(1, -1), new Vector2(-1, 0), new Vector2(0, 0) }, // S
-        new Vector2[] { new Vector2(-1, -1), new Vector2(0, -1), new Vector2(0, 0), new Vector2(1, 0) }, // Z
-        new Vector2[] { new Vector2(-1, 0), new Vector2(-1, 1), new Vector2(0, 1), new Vector2(1, 1) }, // J
-        new Vector2[] { new Vector2(1, 0), new Vector2(-1, 1), new Vector2(0, 1), new Vector2(1, 1) } // L
+    private static readonly Vector2[][] ShapePositions = {
+        new[] { new Vector2(-1, 0), new Vector2(0, 0), new Vector2(1, 0), new Vector2(2, 0) }, // I
+        new[] { new Vector2(-0.5f, -0.5f), new Vector2(0.5f, -0.5f), new Vector2(-0.5f, 0.5f), new Vector2(0.5f, 0.5f) }, // O
+        new[] { new Vector2(-1, 0), new Vector2(0, 0), new Vector2(1, 0), new Vector2(0, 1) }, // T
+        new[] { new Vector2(0, -1), new Vector2(1, -1), new Vector2(-1, 0), new Vector2(0, 0) }, // S
+        new[] { new Vector2(-1, -1), new Vector2(0, -1), new Vector2(0, 0), new Vector2(1, 0) }, // Z
+        new[] { new Vector2(-1, 0), new Vector2(-1, 1), new Vector2(0, 1), new Vector2(1, 1) }, // J
+        new[] { new Vector2(1, 0), new Vector2(-1, 1), new Vector2(0, 1), new Vector2(1, 1) } // L
     };
 
 
-    private static readonly Vector2[] StartPositionOffset = new Vector2[]
-    {
+    private static readonly Vector2[] StartPositionOffset = {
         Vector2.zero,
         new Vector2(0.5f, 0.5f),
         Vector2.zero,
@@ -53,8 +50,7 @@ public class Gameplay : MonoBehaviour
         Vector2.zero,
     };
 
-    private static readonly int[] RotateThreshold = new int[]
-    {
+    private static readonly int[] RotateThreshold = {
         180,
         360,
         360,
@@ -64,8 +60,7 @@ public class Gameplay : MonoBehaviour
         360,
     };
 
-    private static string[] BaseNames = new string[]
-    {
+    private static string[] BaseNames = {
         "I",
         "O",
         "T",
@@ -78,6 +73,7 @@ public class Gameplay : MonoBehaviour
     private IEnumerator Start()
     {
         yield return AssetManager.Initialize();
+        yield return AssetManager.SwitchMode(true);
         // DontDestroyOnLoad(this);
         InputControl = GameObject.Find("Canvas").GetComponentInChildren<InputControl>();
         Instance = this;
@@ -158,7 +154,7 @@ public class Gameplay : MonoBehaviour
         // Debug.LogWarning($"DeleteLine effect duration : {duration}");
         foreach (var line in DeletedRowPositions)
         {
-            var pos = new Vector3(0, line, 0);
+            var pos = new Vector3(0, line, -1);
             var instanceDeleteLineEffect = Instantiate(deleteLineEffectTemplate);
             instanceDeleteLineEffect.transform.position = pos;
             deleteLineEffects.Add(instanceDeleteLineEffect);
@@ -274,6 +270,7 @@ public class Gameplay : MonoBehaviour
     public static void ResetGame()
     {
         // Debug.LogWarning("Reset");
+        IsPausing = false;
         GameEnd = false;
         if (predictionShape != null)
         {
@@ -290,7 +287,7 @@ public class Gameplay : MonoBehaviour
         Physics.SyncTransforms();
     }
 
-    private static bool IsPausing;
+    public static bool IsPausing;
     private static readonly int Color1 = Shader.PropertyToID("_Color");
     private static readonly int Alpha = Shader.PropertyToID("_Alpha");
     private static readonly int AnimationTime = Shader.PropertyToID("_AnimationTime");

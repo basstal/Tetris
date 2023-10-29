@@ -11,7 +11,7 @@ public class TetrisShape : MonoBehaviour
     /// </summary>
     public const float Intervals = 1;
 
-    public float intervalCounter = 0;
+    public float intervalCounter;
     private bool _isStopped;
     public Vector3 bornPos;
     public List<TetrisCollider> colliders = new List<TetrisCollider>();

@@ -1,7 +1,3 @@
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
@@ -33,17 +29,17 @@ public class InputControl : MonoBehaviour
         // find the "move" action, and keep the reference to it, for use in Update
         var gameplayMap = actions.FindActionMap("gameplay");
         leftAction = gameplayMap.FindAction("left");
-        leftAction.performed += (context) => { MoveLeft(); };
+        leftAction.performed += context => { MoveLeft(); };
         rightAction = gameplayMap.FindAction("right");
-        rightAction.performed += (context) => { MoveRight(); };
+        rightAction.performed += context => { MoveRight(); };
         downAction = gameplayMap.FindAction("down");
-        downAction.performed += (context) => { MoveDown(); };
+        downAction.performed += context => { MoveDown(); };
         fastDownAction = gameplayMap.FindAction("fastDown");
-        fastDownAction.performed += (context) => { FastDown(); };
+        fastDownAction.performed += context => { FastDown(); };
         rotateAction = gameplayMap.FindAction("rotate");
-        rotateAction.performed += (context) => { Rotate(); };
+        rotateAction.performed += context => { Rotate(); };
         resetAction = gameplayMap.FindAction("reset");
-        resetAction.performed += (context) => { ResetGame(); };
+        resetAction.performed += context => { ResetGame(); };
     }
 
 
@@ -81,6 +77,10 @@ public class InputControl : MonoBehaviour
 
     public void Rotate()
     {
+        if (Gameplay.IsPausing)
+        {
+            return;
+        }
         if (Gameplay.currentFallingShape != null)
         {
             Gameplay.currentFallingShape.Rotate();
@@ -90,6 +90,10 @@ public class InputControl : MonoBehaviour
 
     public void MoveLeft()
     {
+        if (Gameplay.IsPausing)
+        {
+            return;
+        }
         if (Gameplay.currentFallingShape != null)
         {
             // 如果移动后的左边界没有超过游戏的左边界，并且目标位置没有其他方块，执行移动操作
@@ -104,6 +108,10 @@ public class InputControl : MonoBehaviour
 
     public void MoveRight()
     {
+        if (Gameplay.IsPausing)
+        {
+            return;
+        }
         if (Gameplay.currentFallingShape != null)
         {
             // 如果移动后的右边界没有超过游戏的右边界，并且目标位置没有其他方块，执行移动操作
@@ -120,6 +128,10 @@ public class InputControl : MonoBehaviour
 
     public void MoveDown()
     {
+        if (Gameplay.IsPausing)
+        {
+            return;
+        }
         if (Gameplay.currentFallingShape == null || !Gameplay.currentFallingShape.CanMove(Vector3.down))
         {
             return;
@@ -132,6 +144,10 @@ public class InputControl : MonoBehaviour
 
     public void FastDown()
     {
+        if (Gameplay.IsPausing)
+        {
+            return;
+        }
         if (Gameplay.currentFallingShape != null)
         {
             var minDistance = FindFastDownDistance(Gameplay.currentFallingShape);

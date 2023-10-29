@@ -1,6 +1,4 @@
-﻿using System;
-using UnityEngine;
-using UnityEngine.Serialization;
+﻿using UnityEngine;
 
 public class TetrisCollider : MonoBehaviour
 {
@@ -27,7 +25,7 @@ public class TetrisCollider : MonoBehaviour
 
         if (cachedPos != transform.localPosition)
         {
-            Debug.LogError($"???? should not run here");
+            Debug.LogError("???? should not run here");
         }
 #endif
         if (CheckContactGroundOrOtherShape(Vector3.down) && Gameplay.WaitForFinalModify <= 0)
