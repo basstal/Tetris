@@ -13,7 +13,7 @@ public class Gameplay : MonoBehaviour
 {
     public GameObject[] Basics; // 这应该是一个正方形的预制体，表示基础的方块单元
     public Material predictorMaterial;
-    public VisualEffect vfxComponent;
+    public Material deleteLineMaterial;
     private Vector2[] shapeData; // 当前形状的数据
     public const int CellWidth = 10;
     public const int CellHeight = 10;
@@ -78,7 +78,7 @@ public class Gameplay : MonoBehaviour
     private IEnumerator Start()
     {
         yield return AssetManager.Initialize();
-        DontDestroyOnLoad(this);
+        // DontDestroyOnLoad(this);
         InputControl = GameObject.Find("Canvas").GetComponentInChildren<InputControl>();
         Instance = this;
     }
@@ -94,7 +94,7 @@ public class Gameplay : MonoBehaviour
             }
         }
 
-        if (GameEnd)
+        if (GameEnd || waitDeleteLine)
         {
             return;
         }
@@ -122,42 +122,63 @@ public class Gameplay : MonoBehaviour
             if (group.Count() == CellWidth)
             {
                 DeletedRowPositions.Add(group.Key);
+                waitDeleteLine = true;
                 foreach (var tetrisCollider in group)
                 {
                     tetrisCollider.toBeDelete = true;
-                    waitDeleteLine = true;
+                    var meshRenderer = tetrisCollider.GetComponent<MeshRenderer>();
+                    meshRenderer.material = deleteLineMaterial;
                 }
             }
         }
 
         if (waitDeleteLine)
         {
-            StartCoroutine(DeleteLine());
+            StartCoroutine(DeleteLine(allTetrisColliders));
         }
     }
 
-    public IEnumerator DeleteLine()
+    List<GameObject> deleteLineEffects = new List<GameObject>();
+
+    public IEnumerator DeleteLine(TetrisCollider[] allTetrisColliders)
     {
-        const float maxDuration = 0.5f;
-        var duration = maxDuration;
-        vfxComponent.SetFloat("Duration", maxDuration);
-        vfxComponent.enabled = true;
-        while (duration > 0)
+        GameObject deleteLineEffectTemplate = AssetManager.Instance.LoadAsset<GameObject>("DeleteLine", this);
+        var visualEffect = deleteLineEffectTemplate.GetComponent<VisualEffect>();
+        var duration = visualEffect.GetFloat("Duration");
+        var gradient = visualEffect.GetGradient("ColorGradient");
+        var toColor = gradient.colorKeys[2].color;
+        foreach (var deleteLineEffect in deleteLineEffects)
         {
-            vfxComponent.SetFloat("SampleTime", math.clamp(duration / maxDuration, 0, 1));
-            duration -= Time.deltaTime;
+            DestroyImmediate(deleteLineEffect);
+        }
+
+        deleteLineEffects.Clear();
+        deleteLineMaterial.SetFloat(Duration, duration);
+        deleteLineMaterial.SetColor(ToColor, toColor);
+        // Debug.LogWarning($"DeleteLine effect duration : {duration}");
+        foreach (var line in DeletedRowPositions)
+        {
+            var pos = new Vector3(0, line, 0);
+            var instanceDeleteLineEffect = Instantiate(deleteLineEffectTemplate);
+            instanceDeleteLineEffect.transform.position = pos;
+            deleteLineEffects.Add(instanceDeleteLineEffect);
+        }
+
+        float animationTime = 0;
+        while (animationTime <= duration)
+        {
+            animationTime += Time.deltaTime;
+            deleteLineMaterial.SetFloat(AnimationTime, animationTime);
             yield return null;
         }
 
-        vfxComponent.enabled = false;
-        OnDeleteAnimationComplete();
+
+        OnDeleteAnimationComplete(allTetrisColliders);
         waitDeleteLine = false;
     }
 
-    public void OnDeleteAnimationComplete()
+    public void OnDeleteAnimationComplete(TetrisCollider[] allTetrisColliders)
     {
-        var allTetrisColliders = AllShapes.SelectMany(shape => shape.colliders).ToArray();
-
         foreach (var tetrisCollider in allTetrisColliders)
         {
             if (tetrisCollider.toBeDelete)
@@ -205,6 +226,7 @@ public class Gameplay : MonoBehaviour
         // Debug.LogWarning($"DropATetrisShape : {tetrisShape}", tetrisShape);
         currentFallingShape = tetrisShape;
         predictionShape = CreateShape(shapeIndex, true);
+        Physics.SyncTransforms();
         predictionShape.UpdatePredictor(tetrisShape);
     }
 
@@ -261,15 +283,20 @@ public class Gameplay : MonoBehaviour
         predictionShape = null;
         foreach (var tetrisShape in AllShapes)
         {
-            Destroy(tetrisShape.gameObject);
+            DestroyImmediate(tetrisShape.gameObject);
         }
 
         currentFallingShape = null;
+        Physics.SyncTransforms();
     }
 
     private static bool IsPausing;
     private static readonly int Color1 = Shader.PropertyToID("_Color");
     private static readonly int Alpha = Shader.PropertyToID("_Alpha");
+    private static readonly int AnimationTime = Shader.PropertyToID("_AnimationTime");
+    private static readonly int Duration = Shader.PropertyToID("_Duration");
+    private static readonly int ToColor = Shader.PropertyToID("_ToColor");
+
 
     public static void Pause()
     {
