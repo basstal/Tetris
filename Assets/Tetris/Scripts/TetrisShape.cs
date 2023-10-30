@@ -80,7 +80,10 @@ public class TetrisShape : MonoBehaviour
         var minDistance = InputControl.FindFastDownDistance(this);
         if (minDistance > 0)
         {
-            transform2.position += Vector3.down * (minDistance - 0.5f); // 0.5f为Box的半高，确保方块底部与目标表面对齐
+            var position = transform2.position;
+            position += Vector3.down * (minDistance - 0.5f); // 0.5f为Box的半高，确保方块底部与目标表面对齐
+            position.z = 1;
+            transform2.position = position;
         }
     }
 

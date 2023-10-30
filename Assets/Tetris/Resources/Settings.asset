@@ -1,0 +1,83 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ef1d2c12adf346b09488d616fb124247, type: 3}
+  m_Name: Settings
+  m_EditorClassIdentifier: 
+  shapes:
+  - basic: {fileID: 919132149155446097, guid: c31ff320bdd18ee468d5919ef6585702, type: 3}
+    blockPosition:
+    - {x: -1, y: 0}
+    - {x: 0, y: 0}
+    - {x: 1, y: 0}
+    - {x: 2, y: 0}
+    startPositionOffset: {x: 0, y: 0}
+    rotateThreshold: 180
+    baseName: I
+  - basic: {fileID: 919132149155446097, guid: 8f5678666c421f944be24d09578d3dfd, type: 3}
+    blockPosition:
+    - {x: -0.5, y: -0.5}
+    - {x: 0.5, y: -0.5}
+    - {x: -0.5, y: 0.5}
+    - {x: 0.5, y: 0.5}
+    startPositionOffset: {x: 0.5, y: 0.5}
+    rotateThreshold: 360
+    baseName: O
+  - basic: {fileID: 919132149155446097, guid: 2142dc7364f586047b6aed24b2d38e5d, type: 3}
+    blockPosition:
+    - {x: -1, y: 0}
+    - {x: 0, y: 0}
+    - {x: 1, y: 0}
+    - {x: 0, y: 1}
+    startPositionOffset: {x: 0, y: 0}
+    rotateThreshold: 360
+    baseName: T
+  - basic: {fileID: 919132149155446097, guid: 8dde9d687f6462a40ab13159e3cac208, type: 3}
+    blockPosition:
+    - {x: 0, y: -1}
+    - {x: 1, y: -1}
+    - {x: -1, y: 0}
+    - {x: 0, y: 0}
+    startPositionOffset: {x: 0, y: 0}
+    rotateThreshold: 180
+    baseName: S
+  - basic: {fileID: 919132149155446097, guid: 42afe5a84d3546647ac48cb416349c67, type: 3}
+    blockPosition:
+    - {x: -1, y: -1}
+    - {x: 0, y: -1}
+    - {x: 0, y: 0}
+    - {x: 1, y: 0}
+    startPositionOffset: {x: 0, y: 0}
+    rotateThreshold: 180
+    baseName: Z
+  - basic: {fileID: 919132149155446097, guid: 38f0bdcb2e2e7e746a12c2634e286591, type: 3}
+    blockPosition:
+    - {x: -1, y: 0}
+    - {x: -1, y: 1}
+    - {x: 0, y: 1}
+    - {x: 1, y: 1}
+    startPositionOffset: {x: 0, y: 0}
+    rotateThreshold: 360
+    baseName: J
+  - basic: {fileID: 919132149155446097, guid: b93be44c82d8bb6469725318019b25a5, type: 3}
+    blockPosition:
+    - {x: 1, y: 0}
+    - {x: -1, y: 1}
+    - {x: 0, y: 1}
+    - {x: 1, y: 1}
+    startPositionOffset: {x: 0, y: 0}
+    rotateThreshold: 360
+    baseName: L
+  predictorMaterial: {fileID: -876546973899608171, guid: 76573680cb57e5f4a81533bb762f75e1,
+    type: 3}
+  deleteLineMaterial: {fileID: -876546973899608171, guid: 417297919078c5b4c823e2e5d6289da6,
+    type: 3}
+  deleteLine: {fileID: 8300000, guid: 11f29389a3d54874ba2ebd986763d4bc, type: 3}

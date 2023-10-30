@@ -3,6 +3,8 @@
     "com.91act.noah.odin.inspector": "3.2.7",
     "com.91act.noah.whiterice": "0.12.5",
     "com.91act.noah.yooasset": "1.4.8-c1",
+    "com.91act.noah.multiplay":"1.6.0",
+    "com.unity.netcode.gameobjects":"1.6.0",
     "com.unity.shadergraph": "14.0.9",
     "com.unity.render-pipelines.universal": "14.0.9",
     "com.unity.collab-proxy": "2.0.7",

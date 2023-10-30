@@ -2,13 +2,16 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using Tetris.Scripts;
 using Unity.Mathematics;
+using Unity.Netcode;
 using UnityEngine;
+using UnityEngine.Assertions;
 using UnityEngine.VFX;
 using Whiterice;
 using Random = UnityEngine.Random;
 
-public class Gameplay : MonoBehaviour
+public class Gameplay : NetworkBehaviour
 {
     public GameObject[] Basics; // 这应该是一个正方形的预制体，表示基础的方块单元
     public Material predictorMaterial;
@@ -24,57 +27,13 @@ public class Gameplay : MonoBehaviour
     [NonSerialized] public static TetrisShape predictionShape;
     public static float WaitForFinalModify;
     public static Gameplay Instance;
+    public AudioClip deleteLine;
     [HideInInspector] public bool waitDeleteLine;
     public static TetrisShape[] AllShapes => FindObjectsOfType<TetrisShape>().Where(shape => !shape.isPredictor).ToArray();
 
 
-    // 以下是7种不同的方块形状的数据
-    private static readonly Vector2[][] ShapePositions = {
-        new[] { new Vector2(-1, 0), new Vector2(0, 0), new Vector2(1, 0), new Vector2(2, 0) }, // I
-        new[] { new Vector2(-0.5f, -0.5f), new Vector2(0.5f, -0.5f), new Vector2(-0.5f, 0.5f), new Vector2(0.5f, 0.5f) }, // O
-        new[] { new Vector2(-1, 0), new Vector2(0, 0), new Vector2(1, 0), new Vector2(0, 1) }, // T
-        new[] { new Vector2(0, -1), new Vector2(1, -1), new Vector2(-1, 0), new Vector2(0, 0) }, // S
-        new[] { new Vector2(-1, -1), new Vector2(0, -1), new Vector2(0, 0), new Vector2(1, 0) }, // Z
-        new[] { new Vector2(-1, 0), new Vector2(-1, 1), new Vector2(0, 1), new Vector2(1, 1) }, // J
-        new[] { new Vector2(1, 0), new Vector2(-1, 1), new Vector2(0, 1), new Vector2(1, 1) } // L
-    };
-
-
-    private static readonly Vector2[] StartPositionOffset = {
-        Vector2.zero,
-        new Vector2(0.5f, 0.5f),
-        Vector2.zero,
-        Vector2.zero,
-        Vector2.zero,
-        Vector2.zero,
-        Vector2.zero,
-    };
-
-    private static readonly int[] RotateThreshold = {
-        180,
-        360,
-        360,
-        180,
-        180,
-        360,
-        360,
-    };
-
-    private static string[] BaseNames = {
-        "I",
-        "O",
-        "T",
-        "S",
-        "Z",
-        "J",
-        "L",
-    };
-
-    private IEnumerator Start()
+    private void Start()
     {
-        yield return AssetManager.Initialize();
-        yield return AssetManager.SwitchMode(true);
-        // DontDestroyOnLoad(this);
         InputControl = GameObject.Find("Canvas").GetComponentInChildren<InputControl>();
         Instance = this;
     }
@@ -102,6 +61,7 @@ public class Gameplay : MonoBehaviour
     }
 
     static List<int> DeletedRowPositions = new List<int>();
+    static Dictionary<Color, int> Colors = new Dictionary<Color, int>();
 
     public void CheckDeleteLine()
     {
@@ -112,6 +72,7 @@ public class Gameplay : MonoBehaviour
         // 将 groupedColliders 按 y 从小到大排列
         groupedColliders = groupedColliders.OrderBy(group => group.Key);
         DeletedRowPositions.Clear();
+        Colors.Clear();
         foreach (var group in groupedColliders)
         {
             // 如果有一组的数量等于 CellWidth 则将这一组 TetrisCollider 移除
@@ -123,6 +84,16 @@ public class Gameplay : MonoBehaviour
                 {
                     tetrisCollider.toBeDelete = true;
                     var meshRenderer = tetrisCollider.GetComponent<MeshRenderer>();
+                    var color = meshRenderer.material.color;
+                    if (Colors.ContainsKey(color))
+                    {
+                        Colors[color]++;
+                    }
+                    else
+                    {
+                        Colors[color] = 1;
+                    }
+
                     meshRenderer.material = deleteLineMaterial;
                 }
             }
@@ -130,19 +101,38 @@ public class Gameplay : MonoBehaviour
 
         if (waitDeleteLine)
         {
-            StartCoroutine(DeleteLine(allTetrisColliders));
+            Color toColor = Colors.OrderByDescending(pair => pair.Value).First().Key;
+            // 将AudioClip分配给AudioSource并播放
+            var deleteLineSource = GetComponent<AudioSource>();
+            if (deleteLineSource == null)
+            {
+                deleteLineSource = gameObject.AddComponent<AudioSource>();
+            }
+
+            deleteLineSource.clip = deleteLine;
+            deleteLineSource.Play();
+            StartCoroutine(DeleteLine(allTetrisColliders, toColor));
         }
     }
 
     List<GameObject> deleteLineEffects = new List<GameObject>();
 
-    public IEnumerator DeleteLine(TetrisCollider[] allTetrisColliders)
+    public IEnumerator DeleteLine(TetrisCollider[] allTetrisColliders, Color toColor)
     {
         GameObject deleteLineEffectTemplate = AssetManager.Instance.LoadAsset<GameObject>("DeleteLine", this);
         var visualEffect = deleteLineEffectTemplate.GetComponent<VisualEffect>();
         var duration = visualEffect.GetFloat("Duration");
         var gradient = visualEffect.GetGradient("ColorGradient");
-        var toColor = gradient.colorKeys[2].color;
+        var gradientColorKeys = gradient.colorKeys;
+        GradientColorKey[] keys = new GradientColorKey[3]
+        {
+            new GradientColorKey(gradientColorKeys[0].color, gradientColorKeys[0].time),
+            new GradientColorKey(gradientColorKeys[1].color, gradientColorKeys[1].time),
+            new GradientColorKey(toColor, gradientColorKeys[2].time),
+        };
+        gradient.SetKeys(keys, gradient.alphaKeys);
+        Assert.IsTrue(gradient.colorKeys[2].color == toColor);
+        visualEffect.SetGradient("ColorGradient", gradient);
         foreach (var deleteLineEffect in deleteLineEffects)
         {
             DestroyImmediate(deleteLineEffect);
@@ -170,6 +160,8 @@ public class Gameplay : MonoBehaviour
 
 
         OnDeleteAnimationComplete(allTetrisColliders);
+
+
         waitDeleteLine = false;
     }
 
@@ -228,11 +220,12 @@ public class Gameplay : MonoBehaviour
 
     public TetrisShape CreateShape(int shapeIndex, bool isPredictor = false)
     {
-        var tetrisShape = new GameObject($"TetrisShape_{BaseNames[shapeIndex]}");
+        var shapeSetting = Settings.Instance.shapes[shapeIndex];
+        var tetrisShape = new GameObject($"TetrisShape_{shapeSetting.baseName}");
         tetrisShape.name = $"{tetrisShape.name}_{tetrisShape.GetInstanceID()}";
         var tetrisShapeComponent = tetrisShape.AddComponent<TetrisShape>();
 
-        shapeData = ShapePositions[shapeIndex];
+        shapeData = shapeSetting.blockPosition;
         var component = Basics[shapeIndex];
         foreach (Vector2 pos in shapeData)
         {
@@ -246,9 +239,10 @@ public class Gameplay : MonoBehaviour
         }
 
         // 设置 tetrisShape 的世界坐标位置在 CellWidth 中心和 CellHeight 的高度位置
-        tetrisShape.transform.position = new Vector3(StartPositionOffset[shapeIndex].x, CellHeight + StartPositionOffset[shapeIndex].y, 0);
+        var startPositionOffset = shapeSetting.startPositionOffset;
+        tetrisShape.transform.position = new Vector3(startPositionOffset.x, CellHeight + startPositionOffset.y, isPredictor ? 1 : 0);
         tetrisShapeComponent.bornPos = tetrisShape.transform.position;
-        tetrisShapeComponent.RotateThreshold = RotateThreshold[shapeIndex];
+        tetrisShapeComponent.RotateThreshold = shapeSetting.rotateThreshold;
 
         if (isPredictor)
         {
@@ -256,7 +250,7 @@ public class Gameplay : MonoBehaviour
             tetrisShapeComponent.isPredictor = true;
             var defaultColor = tetrisShapeComponent.colliders[0].GetComponent<MeshRenderer>().material.GetColor(Color1);
             predictorMaterial.SetColor(Color1, defaultColor);
-            predictorMaterial.SetFloat(Alpha, 0.5f);
+            predictorMaterial.SetFloat(Alpha, 0.4f);
             foreach (var colliderComponent in tetrisShapeComponent.colliders)
             {
                 var meshRenderer = colliderComponent.GetComponent<MeshRenderer>();

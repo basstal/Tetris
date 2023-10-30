@@ -4,7 +4,9 @@
     "references": [
         "Whiterice",
         "Unity.Mathematics",
-        "Unity.InputSystem"
+        "Unity.InputSystem",
+        "Unity.Netcode.Runtime",
+        "MultiPlay.Editor"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
