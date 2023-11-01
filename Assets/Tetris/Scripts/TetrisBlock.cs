@@ -1,13 +1,14 @@
-﻿using UnityEngine;
+﻿using Unity.Netcode;
+using UnityEngine;
 
-public class TetrisCollider : MonoBehaviour
+public class TetrisBlock : MonoBehaviour
 {
     [HideInInspector] public TetrisShape belongsTo;
     [HideInInspector] public bool toBeDelete;
 #if DEBUG
     public Vector3 cachedPos;
 #endif
-    public void Start()
+    public void Init()
     {
         var colliderComponent = gameObject.AddComponent<BoxCollider>();
         colliderComponent.size = Vector3.one * 2;
@@ -19,18 +20,35 @@ public class TetrisCollider : MonoBehaviour
 
     private void Update()
     {
+//         if (belongsTo.isStopped || belongsTo.isPredictor)
+//             return; // 如果已经停止，则直接返回
+// #if DEBUG
+//
+//         if (cachedPos != transform.localPosition)
+//         {
+//             Debug.LogError("???? should not run here");
+//         }
+// #endif
+//         if (CheckContactGroundOrOtherShape(Vector3.down) && Player.Instance.WaitForFinalModify <= 0)
+//         {
+//             Player.Instance.WaitForFinalModify = 1;
+//         }
+    }
+
+    public void LogicUpdate(float logicDeltaTime)
+    {
         if (belongsTo.isStopped || belongsTo.isPredictor)
             return; // 如果已经停止，则直接返回
 #if DEBUG
 
         if (cachedPos != transform.localPosition)
         {
-            Debug.LogError("???? should not run here");
+            Debug.LogError($"???? should not run here cachedPos {cachedPos} != transform.localPosition {transform.localPosition}");
         }
 #endif
-        if (CheckContactGroundOrOtherShape(Vector3.down) && Gameplay.WaitForFinalModify <= 0)
+        if (NetworkManager.Singleton.IsServer && CheckContactGroundOrOtherShape(Vector3.down) && Player.Instance.waitForFinalModify.Value <= 0)
         {
-            Gameplay.WaitForFinalModify = 1;
+            Player.Instance.waitForFinalModify.Value = 1;
         }
     }
 
@@ -56,7 +74,7 @@ public class TetrisCollider : MonoBehaviour
     public bool CheckOverlapping(TetrisShape target)
     {
         // 检查当前位置是否临近 target.colliders 中任意节点的位置
-        foreach (var tetrisCollider in target.colliders)
+        foreach (var tetrisCollider in target.blocks)
         {
             if (Vector3.Distance(transform.position, tetrisCollider.transform.position) < 0.1f)
             {
