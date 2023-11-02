@@ -1,3 +1,4 @@
+using Tetris.Scripts;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
@@ -15,6 +16,8 @@ public class InputControl : MonoBehaviour
     // assign the actions asset to this field in the inspector:
     public InputActionAsset actions;
 
+    public InputCommand lastInputCommand;
+
     // private field to store move action reference
     private InputAction leftAction;
     private InputAction rightAction;
@@ -29,17 +32,41 @@ public class InputControl : MonoBehaviour
         // find the "move" action, and keep the reference to it, for use in Update
         var gameplayMap = actions.FindActionMap("gameplay");
         leftAction = gameplayMap.FindAction("left");
-        leftAction.performed += context => { MoveLeft(); };
+        leftAction.performed += context =>
+        {
+            lastInputCommand = InputCommand.MoveLeft;
+            MoveLeft();
+        };
         rightAction = gameplayMap.FindAction("right");
-        rightAction.performed += context => { MoveRight(); };
+        rightAction.performed += context =>
+        {
+            lastInputCommand = InputCommand.MoveRight;
+            MoveRight();
+        };
         downAction = gameplayMap.FindAction("down");
-        downAction.performed += context => { MoveDown(); };
+        downAction.performed += context =>
+        {
+            lastInputCommand = InputCommand.MoveDown;
+            MoveDown();
+        };
         fastDownAction = gameplayMap.FindAction("fastDown");
-        fastDownAction.performed += context => { FastDown(); };
+        fastDownAction.performed += context =>
+        {
+            lastInputCommand = InputCommand.FastDown;
+            FastDown();
+        };
         rotateAction = gameplayMap.FindAction("rotate");
-        rotateAction.performed += context => { Rotate(); };
+        rotateAction.performed += context =>
+        {
+            lastInputCommand = InputCommand.Rotate;
+            Rotate();
+        };
         resetAction = gameplayMap.FindAction("reset");
-        resetAction.performed += context => { ResetGame(); };
+        resetAction.performed += context =>
+        {
+            lastInputCommand = InputCommand.ResetGame;
+            ResetGame();
+        };
     }
 
 
@@ -67,60 +94,63 @@ public class InputControl : MonoBehaviour
 
     public void ResetGame()
     {
-        Gameplay.ResetGame();
+        Player.Instance.ResetGame();
     }
 
     public void Pause()
     {
-        Gameplay.Pause();
+        Player.Instance.Pause();
     }
 
     public void Rotate()
     {
-        if (Gameplay.IsPausing)
+        if (Player.Instance.IsPausing)
         {
             return;
         }
-        if (Gameplay.currentFallingShape != null)
+
+        if (Player.Instance.currentFallingShape != null)
         {
-            Gameplay.currentFallingShape.Rotate();
-            Gameplay.predictionShape.UpdatePredictor(Gameplay.currentFallingShape);
+            Player.Instance.currentFallingShape.Rotate();
+            Player.Instance.predictionShape.UpdatePredictor(Player.Instance.currentFallingShape);
         }
     }
 
     public void MoveLeft()
     {
-        if (Gameplay.IsPausing)
+        if (Player.Instance.IsPausing)
         {
             return;
         }
-        if (Gameplay.currentFallingShape != null)
+
+        if (Player.Instance.currentFallingShape != null)
         {
             // 如果移动后的左边界没有超过游戏的左边界，并且目标位置没有其他方块，执行移动操作
-            var minX = Gameplay.currentFallingShape.MaxBounds.min.x - 1;
-            if ((minX > Gameplay.LeftLimit || Mathf.Approximately(minX, Gameplay.LeftLimit)) && Gameplay.currentFallingShape.CanMove(Vector3.left))
+            var minX = Player.Instance.currentFallingShape.MaxBounds.min.x - 1;
+            if ((minX > Settings.LeftLimit || Mathf.Approximately(minX, Settings.LeftLimit)) && Player.Instance.currentFallingShape.CanMove(Vector3.left))
             {
-                Gameplay.currentFallingShape.transform.position += Vector3.left;
-                Gameplay.predictionShape.UpdatePredictor(Gameplay.currentFallingShape);
+                Player.Instance.currentFallingShape.transform.position += Vector3.left;
+                Player.Instance.predictionShape.UpdatePredictor(Player.Instance.currentFallingShape);
             }
         }
     }
 
     public void MoveRight()
     {
-        if (Gameplay.IsPausing)
+        if (Player.Instance.IsPausing)
         {
             return;
         }
-        if (Gameplay.currentFallingShape != null)
+
+        if (Player.Instance.currentFallingShape != null)
         {
             // 如果移动后的右边界没有超过游戏的右边界，并且目标位置没有其他方块，执行移动操作
-            var maxX = Gameplay.currentFallingShape.MaxBounds.max.x + 1;
-            if ((maxX <= Gameplay.RightLimit || Mathf.Approximately(maxX, Gameplay.RightLimit)) && Gameplay.currentFallingShape.CanMove(Vector3.right))
+            var maxX = Player.Instance.currentFallingShape.MaxBounds.max.x + 1;
+            if ((maxX <= Settings.RightLimit || Mathf.Approximately(maxX, Settings.RightLimit)) && Player.Instance.currentFallingShape.CanMove(Vector3.right))
             {
                 // Debug.LogWarning($"Move Right {Gameplay.currentFallingShape.name}, and update predictionShape : {Gameplay.predictionShape.name}");
-                Gameplay.currentFallingShape.transform.position += Vector3.right;
-                Gameplay.predictionShape.UpdatePredictor(Gameplay.currentFallingShape);
+                Player.Instance.currentFallingShape.transform.position += Vector3.right;
+                Player.Instance.predictionShape.UpdatePredictor(Player.Instance.currentFallingShape);
             }
         }
     }
@@ -128,35 +158,37 @@ public class InputControl : MonoBehaviour
 
     public void MoveDown()
     {
-        if (Gameplay.IsPausing)
-        {
-            return;
-        }
-        if (Gameplay.currentFallingShape == null || !Gameplay.currentFallingShape.CanMove(Vector3.down))
+        if (Player.Instance.IsPausing)
         {
             return;
         }
 
-        Gameplay.currentFallingShape.transform.position += Vector3.down;
-        Gameplay.currentFallingShape.intervalCounter = 0;
+        if (Player.Instance.currentFallingShape == null || !Player.Instance.currentFallingShape.CanMove(Vector3.down))
+        {
+            return;
+        }
+
+        Player.Instance.currentFallingShape.transform.position += Vector3.down;
+        Player.Instance.currentFallingShape.intervalCounter = 0;
     }
 
 
     public void FastDown()
     {
-        if (Gameplay.IsPausing)
+        if (Player.Instance.IsPausing)
         {
             return;
         }
-        if (Gameplay.currentFallingShape != null)
+
+        if (Player.Instance.currentFallingShape != null)
         {
-            var minDistance = FindFastDownDistance(Gameplay.currentFallingShape);
+            var minDistance = FindFastDownDistance(Player.Instance.currentFallingShape);
             if (minDistance > 0)
             {
-                Gameplay.currentFallingShape.transform.position += Vector3.down * (minDistance - 0.5f); // 0.5f为Box的半高，确保方块底部与目标表面对齐
+                Player.Instance.currentFallingShape.transform.position += Vector3.down * (minDistance - 0.5f); // 0.5f为Box的半高，确保方块底部与目标表面对齐
                 Physics.SyncTransforms();
                 // Debug.LogWarning($" from fast down");
-                Gameplay.currentFallingShape.isStopped = true;
+                Player.Instance.currentFallingShape.isStopped = true;
             }
         }
     }
@@ -165,7 +197,7 @@ public class InputControl : MonoBehaviour
     {
         float minDistance = float.MaxValue; // 最初设置为一个非常大的值
 
-        foreach (TetrisCollider blockCollider in shape.colliders)
+        foreach (TetrisBlock blockCollider in shape.blocks)
         {
             // 从每个方块的中心发出射线
             RaycastHit[] hits = Physics.RaycastAll(blockCollider.transform.position, Vector3.down);

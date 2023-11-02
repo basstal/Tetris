@@ -14,7 +14,7 @@ public class TetrisShape : MonoBehaviour
     public float intervalCounter;
     private bool _isStopped;
     public Vector3 bornPos;
-    public List<TetrisCollider> colliders = new List<TetrisCollider>();
+    public List<TetrisBlock> blocks = new List<TetrisBlock>();
     [NonSerialized] public int RotateThreshold;
     public bool isPredictor;
 
@@ -26,45 +26,67 @@ public class TetrisShape : MonoBehaviour
             // Debug.LogWarning($"Stopped name :{name}");
             bool beStopped = value != _isStopped;
             _isStopped = value;
+            Debug.LogWarning($"beStopped : {beStopped}");
             if (beStopped)
             {
-                DestroyImmediate(Gameplay.predictionShape.gameObject);
-                Gameplay.predictionShape = null;
+                DestroyImmediate(Player.Instance.predictionShape.gameObject);
+                Player.Instance.predictionShape = null;
 
-                if (Gameplay.currentFallingShape == this)
+                if (Player.Instance.currentFallingShape == this)
                 {
-                    if (math.distance(Gameplay.currentFallingShape.bornPos, Gameplay.currentFallingShape.transform.position) < 0.1f)
+                    if (math.distance(Player.Instance.currentFallingShape.bornPos, Player.Instance.currentFallingShape.transform.position) < 0.1f)
                     {
-                        // Debug.LogWarning($" Game end at : {Gameplay.currentFallingShape.name}");
-                        Gameplay.GameEnd = true;
+                        // Debug.LogWarning($" Game end at : {Player.Instance.currentFallingShape.name}");
+                        Player.Instance.GameEnd = true;
                     }
 
-                    Gameplay.currentFallingShape = null;
+                    Player.Instance.currentFallingShape = null;
                 }
 
+                Debug.LogWarning($"change tag with object {name}");
                 // 将它的所有 BoxCollider 组件的 gameObject 的 tag 设置为 "StoppedTetrisShape"
                 foreach (var boxCollider in GetComponentsInChildren<BoxCollider>())
                 {
                     boxCollider.gameObject.tag = "StoppedTetrisShape";
                 }
 
-                Gameplay.Instance.CheckDeleteLine();
+                Player.Instance.CheckDeleteLine();
             }
         }
     }
 
     private void Update()
     {
+        // if (isStopped || isPredictor)
+        // {
+        //     return;
+        // }
+        //
+        // intervalCounter += Time.deltaTime;
+        // if (intervalCounter >= Intervals)
+        // {
+        //     intervalCounter = 0;
+        //     DownOneCell();
+        // }
+    }
+
+    public void LogicUpdate(float logicDeltaTime)
+    {
         if (isStopped || isPredictor)
         {
             return;
         }
 
-        intervalCounter += Time.deltaTime;
+        intervalCounter += logicDeltaTime;
         if (intervalCounter >= Intervals)
         {
             intervalCounter = 0;
             DownOneCell();
+        }
+
+        foreach (var block in blocks)
+        {
+            block.LogicUpdate(logicDeltaTime);
         }
     }
 
@@ -124,7 +146,7 @@ public class TetrisShape : MonoBehaviour
 
     public bool CanMove(Vector3 direction)
     {
-        foreach (var colliderCell in colliders)
+        foreach (var colliderCell in blocks)
         {
             if (colliderCell.CheckContactGroundOrOtherShape(direction))
             {
@@ -155,7 +177,7 @@ public class TetrisShape : MonoBehaviour
 
     bool ColliderWithAny()
     {
-        foreach (var tetrisShape in Gameplay.AllShapes)
+        foreach (var tetrisShape in Player.AllShapes)
         {
             if (tetrisShape == this)
             {
@@ -163,7 +185,7 @@ public class TetrisShape : MonoBehaviour
             }
 
             // 检查当前 TetrisShape 的所有子物体是否与其他 TetrisShape 的子物体发生碰撞
-            foreach (var colliderCell in colliders)
+            foreach (var colliderCell in blocks)
             {
                 if (colliderCell.CheckOverlapping(tetrisShape))
                 {
@@ -192,11 +214,11 @@ public class TetrisShape : MonoBehaviour
         // 2. 对于旋转后的子物体，找出那些其 X 坐标超出左/右界限的
         foreach (BoxCollider block in childBlocks)
         {
-            if (block.transform.position.x <= Gameplay.LeftLimit)
+            if (block.transform.position.x <= Settings.LeftLimit)
             {
                 uniqueOutOfBoundX.Add(block.transform.position.x);
             }
-            else if (block.transform.position.x >= Gameplay.RightLimit)
+            else if (block.transform.position.x >= Settings.RightLimit)
             {
                 uniqueOutOfBoundX.Add(block.transform.position.x);
             }
@@ -206,12 +228,12 @@ public class TetrisShape : MonoBehaviour
         // 3. 根据找到的唯一的 X 坐标数量来推挤方块
         if (uniqueOutOfBoundX.Count > 0)
         {
-            if (uniqueOutOfBoundX.Min() <= Gameplay.LeftLimit)
+            if (uniqueOutOfBoundX.Min() <= Settings.LeftLimit)
             {
                 // Debug.LogWarning($"Push right for {finalOutOfBoundX.Count} units due to min.x : {finalOutOfBoundX.Min()}");
                 trans.position += Vector3.right * uniqueOutOfBoundX.Count;
             }
-            else if (uniqueOutOfBoundX.Max() >= Gameplay.RightLimit)
+            else if (uniqueOutOfBoundX.Max() >= Settings.RightLimit)
             {
                 // Debug.LogWarning($"Push left for {finalOutOfBoundX.Count} units due to max.x : {finalOutOfBoundX.Max()}");
                 trans.position += Vector3.left * uniqueOutOfBoundX.Count;

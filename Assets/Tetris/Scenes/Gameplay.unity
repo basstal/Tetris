@@ -1053,6 +1053,7 @@ MonoBehaviour:
   rotateButton: {fileID: 9555564}
   pauseButton: {fileID: 1772188722}
   actions: {fileID: -944628639613478452, guid: 9b4ccfb2df6c3a343b458ab16f02e585, type: 3}
+  lastInputCommand: 0
 --- !u!1 &963194225
 GameObject:
   m_ObjectHideFlags: 0
@@ -1799,65 +1800,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1462210057}
   m_CullTransparentMesh: 1
---- !u!1 &1531340812
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1531340814}
-  - component: {fileID: 1531340813}
-  m_Layer: 0
-  m_Name: Gameplay
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &1531340813
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1531340812}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 749a34b215734cefb53c9b346e949b6b, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  Basics:
-  - {fileID: 919132149155446097, guid: c31ff320bdd18ee468d5919ef6585702, type: 3}
-  - {fileID: 919132149155446097, guid: 8f5678666c421f944be24d09578d3dfd, type: 3}
-  - {fileID: 919132149155446097, guid: 2142dc7364f586047b6aed24b2d38e5d, type: 3}
-  - {fileID: 919132149155446097, guid: 8dde9d687f6462a40ab13159e3cac208, type: 3}
-  - {fileID: 919132149155446097, guid: 42afe5a84d3546647ac48cb416349c67, type: 3}
-  - {fileID: 919132149155446097, guid: 38f0bdcb2e2e7e746a12c2634e286591, type: 3}
-  - {fileID: 919132149155446097, guid: b93be44c82d8bb6469725318019b25a5, type: 3}
-  predictorMaterial: {fileID: -876546973899608171, guid: 76573680cb57e5f4a81533bb762f75e1,
-    type: 3}
-  deleteLineMaterial: {fileID: -876546973899608171, guid: 417297919078c5b4c823e2e5d6289da6,
-    type: 3}
-  InputControl: {fileID: 0}
-  deleteLine: {fileID: 8300000, guid: 11f29389a3d54874ba2ebd986763d4bc, type: 3}
-  waitDeleteLine: 0
---- !u!4 &1531340814
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1531340812}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1772188720
 GameObject:
   m_ObjectHideFlags: 0
@@ -2235,7 +2177,6 @@ SceneRoots:
   m_Roots:
   - {fileID: 963194228}
   - {fileID: 705507995}
-  - {fileID: 1531340814}
   - {fileID: 2143121574}
   - {fileID: 777933553}
   - {fileID: 431107131}
