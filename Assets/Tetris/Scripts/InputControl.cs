@@ -1,5 +1,6 @@
 using System;
 using Tetris.Scripts;
+using TMPro;
 using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -14,6 +15,8 @@ public class InputControl : MonoBehaviour
     public Button resetButton;
     public Button rotateButton;
     public Button pauseButton;
+
+    public TextMeshProUGUI deleteLineCount;
 
     // assign the actions asset to this field in the inspector:
     public InputActionAsset actions;
@@ -71,43 +74,40 @@ public class InputControl : MonoBehaviour
         _player = player;
         if (NetworkManager.Singleton.IsServer)
         {
-            if (_player.OwnerClientId == 1)
-            {
-                // find the "move" action, and keep the reference to it, for use in Update
-                var gameplayMap = actions.FindActionMap("gameplay");
-                leftAction = gameplayMap.FindAction("left");
-                leftAction.performed += context => { _player.inputCommands.Add((int)InputCommand.MoveLeft); };
-                rightAction = gameplayMap.FindAction("right");
-                rightAction.performed += context => { _player.inputCommands.Add((int)InputCommand.MoveRight); };
-                downAction = gameplayMap.FindAction("down");
-                downAction.performed += context => { _player.inputCommands.Add((int)InputCommand.MoveDown); };
-                fastDownAction = gameplayMap.FindAction("fastDown");
-                fastDownAction.performed += context => { _player.inputCommands.Add((int)InputCommand.FastDown); };
-                rotateAction = gameplayMap.FindAction("rotate");
-                rotateAction.performed += context => { _player.inputCommands.Add((int)InputCommand.Rotate); };
-                resetAction = gameplayMap.FindAction("reset");
-                resetAction.performed += context => { _player.inputCommands.Add((int)InputCommand.ResetGame); };
-                // 为按钮绑定事件
-                leftButton.onClick.AddListener(() => { _player.inputCommands.Add((int)InputCommand.MoveLeft); });
-                rightButton.onClick.AddListener(() => { _player.inputCommands.Add((int)InputCommand.MoveRight); });
-                downButton.onClick.AddListener(() => { _player.inputCommands.Add((int)InputCommand.MoveDown); });
-                upButton.onClick.AddListener(() => { _player.inputCommands.Add((int)InputCommand.FastDown); });
-                resetButton.onClick.AddListener(() => { _player.inputCommands.Add((int)InputCommand.ResetGame); });
-                rotateButton.onClick.AddListener(() => { _player.inputCommands.Add((int)InputCommand.Rotate); });
-                pauseButton.onClick.AddListener(() => { _player.inputCommands.Add((int)InputCommand.Pause); });
-            }
+            // find the "move" action, and keep the reference to it, for use in Update
+            var gameplayMap = actions.FindActionMap("gameplay");
+            leftAction = gameplayMap.FindAction("left");
+            leftAction.performed += context => { _player.inputCommands.Add((int)InputCommand.MoveLeft); };
+            rightAction = gameplayMap.FindAction("right");
+            rightAction.performed += context => { _player.inputCommands.Add((int)InputCommand.MoveRight); };
+            downAction = gameplayMap.FindAction("down");
+            downAction.performed += context => { _player.inputCommands.Add((int)InputCommand.MoveDown); };
+            fastDownAction = gameplayMap.FindAction("fastDown");
+            fastDownAction.performed += context => { _player.inputCommands.Add((int)InputCommand.FastDown); };
+            rotateAction = gameplayMap.FindAction("rotate");
+            rotateAction.performed += context => { _player.inputCommands.Add((int)InputCommand.Rotate); };
+            resetAction = gameplayMap.FindAction("reset");
+            resetAction.performed += context => { _player.inputCommands.Add((int)InputCommand.ResetGame); };
+            // 为按钮绑定事件
+            leftButton.onClick.AddListener(() => { _player.inputCommands.Add((int)InputCommand.MoveLeft); });
+            rightButton.onClick.AddListener(() => { _player.inputCommands.Add((int)InputCommand.MoveRight); });
+            downButton.onClick.AddListener(() => { _player.inputCommands.Add((int)InputCommand.MoveDown); });
+            upButton.onClick.AddListener(() => { _player.inputCommands.Add((int)InputCommand.FastDown); });
+            resetButton.onClick.AddListener(() => { _player.inputCommands.Add((int)InputCommand.ResetGame); });
+            rotateButton.onClick.AddListener(() => { _player.inputCommands.Add((int)InputCommand.Rotate); });
+            pauseButton.onClick.AddListener(() => { _player.inputCommands.Add((int)InputCommand.Pause); });
         }
     }
 
-    // void OnEnable()
-    // {
-    //     actions.FindActionMap("gameplay").Enable();
-    // }
-    //
-    // void OnDisable()
-    // {
-    //     actions.FindActionMap("gameplay").Disable();
-    // }
+    void OnEnable()
+    {
+        actions.FindActionMap("gameplay").Enable();
+    }
+
+    void OnDisable()
+    {
+        actions.FindActionMap("gameplay").Disable();
+    }
 
     public void ResetGame()
     {

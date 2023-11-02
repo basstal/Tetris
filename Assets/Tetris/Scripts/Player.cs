@@ -4,19 +4,14 @@ using System.Collections.Generic;
 using System.Linq;
 using Unity.Mathematics;
 using Unity.Netcode;
-using UnityEditor.VersionControl;
 using UnityEngine;
 using UnityEngine.Assertions;
-using UnityEngine.Serialization;
 using UnityEngine.VFX;
 using Whiterice;
 using Random = UnityEngine.Random;
 
 public class Player : NetworkBehaviour
 {
-    // public GameObject[] Basics; // 这应该是一个正方形的预制体，表示基础的方块单元
-    // public Material predictorMaterial;
-    // public Material deleteLineMaterial;
     private Vector2[] shapeData; // 当前形状的数据
 
 
@@ -25,15 +20,20 @@ public class Player : NetworkBehaviour
     [NonSerialized] public TetrisShape currentFallingShape;
     [NonSerialized] public TetrisShape predictionShape;
 
-    // public static Player Instance;
-
-    // public AudioClip deleteLine;
     [HideInInspector] public bool waitDeleteLine;
     public static TetrisShape[] AllShapes => FindObjectsOfType<TetrisShape>().Where(shape => !shape.isPredictor).ToArray();
 
     [NonSerialized] public NetworkVariable<float> waitForFinalModify = new NetworkVariable<float>();
     [NonSerialized] public NetworkVariable<int> shapeIndex = new NetworkVariable<int>(-1);
-    [NonSerialized] public NetworkList<int> inputCommands = new NetworkList<int>(); // TODO: memory leak??
+    [NonSerialized] public NetworkList<int> inputCommands;
+    [NonSerialized] public NetworkVariable<int> nextShapeIndex = new NetworkVariable<int>(-1);
+
+    public int haveDeleteLineCount;
+
+    private void Awake()
+    {
+        inputCommands = new NetworkList<int>();
+    }
 
     public override void OnNetworkSpawn()
     {
@@ -45,6 +45,8 @@ public class Player : NetworkBehaviour
         InputControl = GameObject.Find("Canvas").GetComponentInChildren<InputControl>();
         InputControl.Init(this);
         inputCommands.OnListChanged += InputControl.Execute;
+        AssetManager.Instance.InstantiatePrefab("Ground", null, new Vector3(0, -8.51f, 0));
+        ResetGame();
     }
 
 
@@ -53,10 +55,7 @@ public class Player : NetworkBehaviour
         if (NetworkManager.Singleton.IsServer)
         {
             // 如果是服务器，则直接使用本地的时间做 tick，将 tick 的结果通过状态同步给客户端
-            if (OwnerClientId == 1) // 先等客户端连进来同步客户端 1 的数据
-            {
-                LogicUpdateClientRpc(Time.deltaTime);
-            }
+            LogicUpdateClientRpc(Time.deltaTime);
         }
     }
 
@@ -185,6 +184,7 @@ public class Player : NetworkBehaviour
             var instanceDeleteLineEffect = Instantiate(deleteLineEffectTemplate);
             instanceDeleteLineEffect.transform.position = pos;
             deleteLineEffects.Add(instanceDeleteLineEffect);
+            ++haveDeleteLineCount;
         }
 
         float animationTime = 0;
@@ -242,6 +242,8 @@ public class Player : NetworkBehaviour
                 DestroyImmediate(tetrisShape.gameObject);
             }
         }
+
+        InputControl.deleteLineCount.text = $"{math.min(999, haveDeleteLineCount)}";
     }
 
     public void DropATetrisShape(int previousShapeIndex, int currentShapeIndex)
@@ -264,10 +266,10 @@ public class Player : NetworkBehaviour
         predictionShape = CreateShape(currentShapeIndex, true);
         Physics.SyncTransforms();
         predictionShape.UpdatePredictor(currentFallingShape);
-        if (!IsServer)
-        {
-            DoneDropATetrisShapeServerRpc();
-        }
+        // if (!IsServer)
+        // {
+        DoneDropATetrisShapeServerRpc();
+        // }
     }
 
     [ServerRpc]
@@ -330,6 +332,8 @@ public class Player : NetworkBehaviour
     public void ResetGame()
     {
         // Debug.LogWarning("Reset");
+        haveDeleteLineCount = 0;
+        InputControl.deleteLineCount.text = $"{math.min(999, haveDeleteLineCount)}";
         IsPausing = false;
         GameEnd = false;
         if (predictionShape != null)

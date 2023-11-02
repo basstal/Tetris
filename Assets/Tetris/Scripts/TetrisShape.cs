@@ -17,6 +17,7 @@ public class TetrisShape : MonoBehaviour
     public List<TetrisBlock> blocks = new List<TetrisBlock>();
     [NonSerialized] public int RotateThreshold;
     public bool isPredictor;
+    public bool isNextPreview;
     public Player player;
 
     public bool isStopped

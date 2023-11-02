@@ -6,7 +6,8 @@
         "Unity.Mathematics",
         "Unity.InputSystem",
         "Unity.Netcode.Runtime",
-        "MultiPlay.Editor"
+        "MultiPlay.Editor",
+        "Unity.TextMeshPro"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
