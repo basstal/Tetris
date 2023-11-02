@@ -17,6 +17,7 @@ public class TetrisShape : MonoBehaviour
     public List<TetrisBlock> blocks = new List<TetrisBlock>();
     [NonSerialized] public int RotateThreshold;
     public bool isPredictor;
+    public Player player;
 
     public bool isStopped
     {
@@ -29,18 +30,18 @@ public class TetrisShape : MonoBehaviour
             Debug.LogWarning($"beStopped : {beStopped}");
             if (beStopped)
             {
-                DestroyImmediate(Player.Instance.predictionShape.gameObject);
-                Player.Instance.predictionShape = null;
+                DestroyImmediate(player.predictionShape.gameObject);
+                player.predictionShape = null;
 
-                if (Player.Instance.currentFallingShape == this)
+                if (player.currentFallingShape == this)
                 {
-                    if (math.distance(Player.Instance.currentFallingShape.bornPos, Player.Instance.currentFallingShape.transform.position) < 0.1f)
+                    if (math.distance(player.currentFallingShape.bornPos, player.currentFallingShape.transform.position) < 0.1f)
                     {
-                        // Debug.LogWarning($" Game end at : {Player.Instance.currentFallingShape.name}");
-                        Player.Instance.GameEnd = true;
+                        // Debug.LogWarning($" Game end at : {player.currentFallingShape.name}");
+                        player.GameEnd = true;
                     }
 
-                    Player.Instance.currentFallingShape = null;
+                    player.currentFallingShape = null;
                 }
 
                 Debug.LogWarning($"change tag with object {name}");
@@ -50,9 +51,14 @@ public class TetrisShape : MonoBehaviour
                     boxCollider.gameObject.tag = "StoppedTetrisShape";
                 }
 
-                Player.Instance.CheckDeleteLine();
+                player.CheckDeleteLine();
             }
         }
+    }
+
+    public void Init(Player inPlayer)
+    {
+        player = inPlayer;
     }
 
     private void Update()

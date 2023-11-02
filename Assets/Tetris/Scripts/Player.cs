@@ -25,7 +25,7 @@ public class Player : NetworkBehaviour
     [NonSerialized] public TetrisShape currentFallingShape;
     [NonSerialized] public TetrisShape predictionShape;
 
-    public static Player Instance;
+    // public static Player Instance;
 
     // public AudioClip deleteLine;
     [HideInInspector] public bool waitDeleteLine;
@@ -33,16 +33,20 @@ public class Player : NetworkBehaviour
 
     [NonSerialized] public NetworkVariable<float> waitForFinalModify = new NetworkVariable<float>();
     [NonSerialized] public NetworkVariable<int> shapeIndex = new NetworkVariable<int>(-1);
+    [NonSerialized] public NetworkList<int> inputCommands = new NetworkList<int>(); // TODO: memory leak??
 
     public override void OnNetworkSpawn()
     {
         base.OnNetworkSpawn();
         name = $"OwnerClientId:{OwnerClientId}";
-        InputControl = GameObject.Find("Canvas").GetComponentInChildren<InputControl>();
-        Instance = this;
+        // Instance = this;
         shapeIndex.OnValueChanged += DropATetrisShape;
         waitForFinalModify.OnValueChanged += WaitForFinalModify;
+        InputControl = GameObject.Find("Canvas").GetComponentInChildren<InputControl>();
+        InputControl.Init(this);
+        inputCommands.OnListChanged += InputControl.Execute;
     }
+
 
     private void Update()
     {
@@ -69,9 +73,9 @@ public class Player : NetworkBehaviour
             return;
         }
 
-        if (Instance.currentFallingShape != null)
+        if (currentFallingShape != null)
         {
-            Instance.currentFallingShape.LogicUpdate(logicDeltaTime);
+            currentFallingShape.LogicUpdate(logicDeltaTime);
         }
         else
         {
@@ -82,13 +86,13 @@ public class Player : NetworkBehaviour
         }
     }
 
-    public void WaitForFinalModify(float last, float current)
+    public void WaitForFinalModify(float previous, float current)
     {
-        if (last >= 0 && current < 0)
+        if (previous >= 0 && current < 0)
         {
-            if (Instance.currentFallingShape != null && !Instance.currentFallingShape.CanMove(Vector3.down))
+            if (currentFallingShape != null && !currentFallingShape.CanMove(Vector3.down))
             {
-                Instance.currentFallingShape.isStopped = true;
+                currentFallingShape.isStopped = true;
             }
         }
     }
@@ -248,6 +252,12 @@ public class Player : NetworkBehaviour
             return;
         }
 
+        if (currentFallingShape != null)
+        {
+            DelayDropShapeServerRpc();
+            return;
+        }
+
         Assert.IsTrue(currentShapeIndex < Settings.Instance.shapes.Length);
         currentFallingShape = CreateShape(currentShapeIndex);
         // Debug.LogWarning($"DropATetrisShape : {tetrisShape}", tetrisShape);
@@ -258,6 +268,13 @@ public class Player : NetworkBehaviour
         {
             DoneDropATetrisShapeServerRpc();
         }
+    }
+
+    [ServerRpc]
+    public void DelayDropShapeServerRpc(ServerRpcParams rpcParams = default)
+    {
+        shapeIndex.Value = shapeIndex.Value;
+        shapeIndex.SetDirty(true);
     }
 
     [ServerRpc]
@@ -272,7 +289,7 @@ public class Player : NetworkBehaviour
         var tetrisShape = new GameObject($"TetrisShape_{shapeSetting.baseName}");
         tetrisShape.name = $"{tetrisShape.name}_{tetrisShape.GetInstanceID()}";
         var tetrisShapeComponent = tetrisShape.AddComponent<TetrisShape>();
-
+        tetrisShapeComponent.Init(this);
         shapeData = shapeSetting.blockPosition;
         var component = shapeSetting.basic;
         foreach (Vector2 pos in shapeData)

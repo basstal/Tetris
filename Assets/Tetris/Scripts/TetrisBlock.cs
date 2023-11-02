@@ -46,9 +46,9 @@ public class TetrisBlock : MonoBehaviour
             Debug.LogError($"???? should not run here cachedPos {cachedPos} != transform.localPosition {transform.localPosition}");
         }
 #endif
-        if (NetworkManager.Singleton.IsServer && CheckContactGroundOrOtherShape(Vector3.down) && Player.Instance.waitForFinalModify.Value <= 0)
+        if (NetworkManager.Singleton.IsServer && CheckContactGroundOrOtherShape(Vector3.down) && belongsTo.player.waitForFinalModify.Value <= 0)
         {
-            Player.Instance.waitForFinalModify.Value = 1;
+            belongsTo.player.waitForFinalModify.Value = 1;
         }
     }
 

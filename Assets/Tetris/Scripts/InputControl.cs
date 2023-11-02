@@ -1,4 +1,6 @@
+using System;
 using Tetris.Scripts;
+using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
@@ -16,7 +18,6 @@ public class InputControl : MonoBehaviour
     // assign the actions asset to this field in the inspector:
     public InputActionAsset actions;
 
-    public InputCommand lastInputCommand;
 
     // private field to store move action reference
     private InputAction leftAction;
@@ -26,131 +27,147 @@ public class InputControl : MonoBehaviour
     private InputAction rotateAction;
     private InputAction resetAction;
 
+    private Player _player;
 
-    void Awake()
+    public void Execute(NetworkListEvent<int> current)
     {
-        // find the "move" action, and keep the reference to it, for use in Update
-        var gameplayMap = actions.FindActionMap("gameplay");
-        leftAction = gameplayMap.FindAction("left");
-        leftAction.performed += context =>
-        {
-            lastInputCommand = InputCommand.MoveLeft;
-            MoveLeft();
-        };
-        rightAction = gameplayMap.FindAction("right");
-        rightAction.performed += context =>
-        {
-            lastInputCommand = InputCommand.MoveRight;
-            MoveRight();
-        };
-        downAction = gameplayMap.FindAction("down");
-        downAction.performed += context =>
-        {
-            lastInputCommand = InputCommand.MoveDown;
-            MoveDown();
-        };
-        fastDownAction = gameplayMap.FindAction("fastDown");
-        fastDownAction.performed += context =>
-        {
-            lastInputCommand = InputCommand.FastDown;
-            FastDown();
-        };
-        rotateAction = gameplayMap.FindAction("rotate");
-        rotateAction.performed += context =>
-        {
-            lastInputCommand = InputCommand.Rotate;
-            Rotate();
-        };
-        resetAction = gameplayMap.FindAction("reset");
-        resetAction.performed += context =>
-        {
-            lastInputCommand = InputCommand.ResetGame;
-            ResetGame();
-        };
-    }
-
-
-    void OnEnable()
-    {
-        actions.FindActionMap("gameplay").Enable();
-    }
-
-    void OnDisable()
-    {
-        actions.FindActionMap("gameplay").Disable();
-    }
-
-    private void Start()
-    {
-        // 为按钮绑定事件
-        leftButton.onClick.AddListener(MoveLeft);
-        rightButton.onClick.AddListener(MoveRight);
-        downButton.onClick.AddListener(MoveDown);
-        upButton.onClick.AddListener(FastDown);
-        resetButton.onClick.AddListener(ResetGame);
-        rotateButton.onClick.AddListener(Rotate);
-        pauseButton.onClick.AddListener(Pause);
-    }
-
-    public void ResetGame()
-    {
-        Player.Instance.ResetGame();
-    }
-
-    public void Pause()
-    {
-        Player.Instance.Pause();
-    }
-
-    public void Rotate()
-    {
-        if (Player.Instance.IsPausing)
+        InputCommand command = (InputCommand)current.Value;
+        if (command == InputCommand.None)
         {
             return;
         }
 
-        if (Player.Instance.currentFallingShape != null)
+        switch (command)
         {
-            Player.Instance.currentFallingShape.Rotate();
-            Player.Instance.predictionShape.UpdatePredictor(Player.Instance.currentFallingShape);
+            case InputCommand.MoveLeft:
+                MoveLeft();
+                break;
+            case InputCommand.MoveRight:
+                MoveRight();
+                break;
+            case InputCommand.MoveDown:
+                MoveDown();
+                break;
+            case InputCommand.FastDown:
+                FastDown();
+                break;
+            case InputCommand.ResetGame:
+                ResetGame();
+                break;
+            case InputCommand.Rotate:
+                Rotate();
+                break;
+            case InputCommand.Pause:
+                Pause();
+                break;
+            default:
+                Debug.LogError($"failed to execute command {current}");
+                break;
+        }
+    }
+
+    public void Init(Player player)
+    {
+        _player = player;
+        if (NetworkManager.Singleton.IsServer)
+        {
+            if (_player.OwnerClientId == 1)
+            {
+                // find the "move" action, and keep the reference to it, for use in Update
+                var gameplayMap = actions.FindActionMap("gameplay");
+                leftAction = gameplayMap.FindAction("left");
+                leftAction.performed += context => { _player.inputCommands.Add((int)InputCommand.MoveLeft); };
+                rightAction = gameplayMap.FindAction("right");
+                rightAction.performed += context => { _player.inputCommands.Add((int)InputCommand.MoveRight); };
+                downAction = gameplayMap.FindAction("down");
+                downAction.performed += context => { _player.inputCommands.Add((int)InputCommand.MoveDown); };
+                fastDownAction = gameplayMap.FindAction("fastDown");
+                fastDownAction.performed += context => { _player.inputCommands.Add((int)InputCommand.FastDown); };
+                rotateAction = gameplayMap.FindAction("rotate");
+                rotateAction.performed += context => { _player.inputCommands.Add((int)InputCommand.Rotate); };
+                resetAction = gameplayMap.FindAction("reset");
+                resetAction.performed += context => { _player.inputCommands.Add((int)InputCommand.ResetGame); };
+                // 为按钮绑定事件
+                leftButton.onClick.AddListener(() => { _player.inputCommands.Add((int)InputCommand.MoveLeft); });
+                rightButton.onClick.AddListener(() => { _player.inputCommands.Add((int)InputCommand.MoveRight); });
+                downButton.onClick.AddListener(() => { _player.inputCommands.Add((int)InputCommand.MoveDown); });
+                upButton.onClick.AddListener(() => { _player.inputCommands.Add((int)InputCommand.FastDown); });
+                resetButton.onClick.AddListener(() => { _player.inputCommands.Add((int)InputCommand.ResetGame); });
+                rotateButton.onClick.AddListener(() => { _player.inputCommands.Add((int)InputCommand.Rotate); });
+                pauseButton.onClick.AddListener(() => { _player.inputCommands.Add((int)InputCommand.Pause); });
+            }
+        }
+    }
+
+    // void OnEnable()
+    // {
+    //     actions.FindActionMap("gameplay").Enable();
+    // }
+    //
+    // void OnDisable()
+    // {
+    //     actions.FindActionMap("gameplay").Disable();
+    // }
+
+    public void ResetGame()
+    {
+        _player.ResetGame();
+    }
+
+    public void Pause()
+    {
+        _player.Pause();
+    }
+
+    public void Rotate()
+    {
+        if (_player.IsPausing)
+        {
+            return;
+        }
+
+        if (_player.currentFallingShape != null)
+        {
+            _player.currentFallingShape.Rotate();
+            _player.predictionShape.UpdatePredictor(_player.currentFallingShape);
         }
     }
 
     public void MoveLeft()
     {
-        if (Player.Instance.IsPausing)
+        if (_player.IsPausing)
         {
             return;
         }
 
-        if (Player.Instance.currentFallingShape != null)
+        if (_player.currentFallingShape != null)
         {
             // 如果移动后的左边界没有超过游戏的左边界，并且目标位置没有其他方块，执行移动操作
-            var minX = Player.Instance.currentFallingShape.MaxBounds.min.x - 1;
-            if ((minX > Settings.LeftLimit || Mathf.Approximately(minX, Settings.LeftLimit)) && Player.Instance.currentFallingShape.CanMove(Vector3.left))
+            var minX = _player.currentFallingShape.MaxBounds.min.x - 1;
+            if ((minX > Settings.LeftLimit || Mathf.Approximately(minX, Settings.LeftLimit)) && _player.currentFallingShape.CanMove(Vector3.left))
             {
-                Player.Instance.currentFallingShape.transform.position += Vector3.left;
-                Player.Instance.predictionShape.UpdatePredictor(Player.Instance.currentFallingShape);
+                _player.currentFallingShape.transform.position += Vector3.left;
+                _player.predictionShape.UpdatePredictor(_player.currentFallingShape);
             }
         }
     }
 
     public void MoveRight()
     {
-        if (Player.Instance.IsPausing)
+        if (_player.IsPausing)
         {
             return;
         }
 
-        if (Player.Instance.currentFallingShape != null)
+        if (_player.currentFallingShape != null)
         {
             // 如果移动后的右边界没有超过游戏的右边界，并且目标位置没有其他方块，执行移动操作
-            var maxX = Player.Instance.currentFallingShape.MaxBounds.max.x + 1;
-            if ((maxX <= Settings.RightLimit || Mathf.Approximately(maxX, Settings.RightLimit)) && Player.Instance.currentFallingShape.CanMove(Vector3.right))
+            var maxX = _player.currentFallingShape.MaxBounds.max.x + 1;
+            if ((maxX <= Settings.RightLimit || Mathf.Approximately(maxX, Settings.RightLimit)) && _player.currentFallingShape.CanMove(Vector3.right))
             {
                 // Debug.LogWarning($"Move Right {Gameplay.currentFallingShape.name}, and update predictionShape : {Gameplay.predictionShape.name}");
-                Player.Instance.currentFallingShape.transform.position += Vector3.right;
-                Player.Instance.predictionShape.UpdatePredictor(Player.Instance.currentFallingShape);
+                _player.currentFallingShape.transform.position += Vector3.right;
+                _player.predictionShape.UpdatePredictor(_player.currentFallingShape);
             }
         }
     }
@@ -158,38 +175,40 @@ public class InputControl : MonoBehaviour
 
     public void MoveDown()
     {
-        if (Player.Instance.IsPausing)
+        if (_player.IsPausing)
         {
             return;
         }
 
-        if (Player.Instance.currentFallingShape == null || !Player.Instance.currentFallingShape.CanMove(Vector3.down))
+        if (_player.currentFallingShape == null || !_player.currentFallingShape.CanMove(Vector3.down))
         {
             return;
         }
 
-        Player.Instance.currentFallingShape.transform.position += Vector3.down;
-        Player.Instance.currentFallingShape.intervalCounter = 0;
+        _player.currentFallingShape.transform.position += Vector3.down;
+        _player.currentFallingShape.intervalCounter = 0;
     }
 
 
     public void FastDown()
     {
-        if (Player.Instance.IsPausing)
+        if (_player.IsPausing)
         {
             return;
         }
 
-        if (Player.Instance.currentFallingShape != null)
+        if (_player.currentFallingShape == null)
         {
-            var minDistance = FindFastDownDistance(Player.Instance.currentFallingShape);
-            if (minDistance > 0)
-            {
-                Player.Instance.currentFallingShape.transform.position += Vector3.down * (minDistance - 0.5f); // 0.5f为Box的半高，确保方块底部与目标表面对齐
-                Physics.SyncTransforms();
-                // Debug.LogWarning($" from fast down");
-                Player.Instance.currentFallingShape.isStopped = true;
-            }
+            return;
+        }
+
+        var minDistance = FindFastDownDistance(_player.currentFallingShape);
+        if (minDistance > 0)
+        {
+            _player.currentFallingShape.transform.position += Vector3.down * (minDistance - 0.5f); // 0.5f为Box的半高，确保方块底部与目标表面对齐
+            Physics.SyncTransforms();
+            // Debug.LogWarning($" from fast down");
+            _player.currentFallingShape.isStopped = true;
         }
     }
 
