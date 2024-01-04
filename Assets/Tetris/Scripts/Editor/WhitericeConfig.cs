@@ -1,7 +1,10 @@
 ﻿using UnityEngine;
 using WhitericeEditor;
 
-[CreateAssetMenu(menuName = "WhitericeConfig", fileName = "WhitericeConfig")]
-public class WhitericeConfig : WhitericeConfigBase
+namespace Tetris.Scripts.Editor
 {
+    [CreateAssetMenu(menuName = "WhitericeConfig", fileName = "WhitericeConfig")]
+    public class WhitericeConfig : WhitericeConfigBase
+    {
+    }
 }

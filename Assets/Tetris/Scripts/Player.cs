@@ -10,358 +10,362 @@ using UnityEngine.VFX;
 using Whiterice;
 using Random = UnityEngine.Random;
 
-public class Player : NetworkBehaviour
+namespace Tetris.Scripts
 {
-    private Vector2[] shapeData; // 当前形状的数据
-
-
-    [HideInInspector] public InputControl InputControl;
-    public bool GameEnd;
-    [NonSerialized] public TetrisShape currentFallingShape;
-    [NonSerialized] public TetrisShape predictionShape;
-
-    [HideInInspector] public bool waitDeleteLine;
-    public static TetrisShape[] AllShapes => FindObjectsOfType<TetrisShape>().Where(shape => !shape.isPredictor).ToArray();
-
-    [NonSerialized] public NetworkVariable<float> waitForFinalModify = new NetworkVariable<float>();
-    [NonSerialized] public NetworkVariable<int> shapeIndex = new NetworkVariable<int>(-1);
-    [NonSerialized] public NetworkList<int> inputCommands;
-    [NonSerialized] public NetworkVariable<int> nextShapeIndex = new NetworkVariable<int>(-1);
-
-    public int haveDeleteLineCount;
-
-    private void Awake()
+    public class Player : NetworkBehaviour
     {
-        inputCommands = new NetworkList<int>();
-    }
-
-    public override void OnNetworkSpawn()
-    {
-        base.OnNetworkSpawn();
-        name = $"OwnerClientId:{OwnerClientId}";
-        // Instance = this;
-        shapeIndex.OnValueChanged += DropATetrisShape;
-        waitForFinalModify.OnValueChanged += WaitForFinalModify;
-        InputControl = GameObject.Find("Canvas").GetComponentInChildren<InputControl>();
-        InputControl.Init(this);
-        inputCommands.OnListChanged += InputControl.Execute;
-        AssetManager.Instance.InstantiatePrefab("Ground", null, new Vector3(0, -8.51f, 0));
-        ResetGame();
-    }
+        private float2[] shapeData; // 当前形状的数据
 
 
-    private void Update()
-    {
-        if (NetworkManager.Singleton.IsServer)
+        [HideInInspector] public InputControl inputControl;
+        public bool gameEnd;
+        [NonSerialized] public TetrisShape CurrentFallingShape;
+        [NonSerialized] public TetrisShape PredictionShape;
+
+        [HideInInspector] public bool waitDeleteLine;
+        public static TetrisShape[] AllShapes => FindObjectsByType<TetrisShape>(FindObjectsSortMode.None).Where(shape => !shape.isPredictor).ToArray();
+
+        [NonSerialized] public readonly NetworkVariable<float> WaitForFinalModify = new NetworkVariable<float>();
+        [NonSerialized] public readonly NetworkVariable<int> ShapeIndex = new NetworkVariable<int>(-1);
+        [NonSerialized] public NetworkList<int> InputCommands;
+        [NonSerialized] public NetworkVariable<int> NextShapeIndex = new NetworkVariable<int>(-1);
+
+        public int haveDeleteLineCount;
+
+        private void Awake()
         {
-            // 如果是服务器，则直接使用本地的时间做 tick，将 tick 的结果通过状态同步给客户端
-            LogicUpdateClientRpc(Time.deltaTime);
-        }
-    }
-
-    [ClientRpc]
-    public void LogicUpdateClientRpc(float logicDeltaTime)
-    {
-        if (IsServer && waitForFinalModify.Value > 0)
-        {
-            waitForFinalModify.Value -= logicDeltaTime;
+            InputCommands = new NetworkList<int>();
         }
 
-        if (GameEnd || waitDeleteLine)
+        public override void OnNetworkSpawn()
         {
-            return;
+            base.OnNetworkSpawn();
+            name = $"OwnerClientId:{OwnerClientId}";
+            // Instance = this;
+            ShapeIndex.OnValueChanged += DropATetrisShape;
+            WaitForFinalModify.OnValueChanged += WaitForFinalModifyOnValueChanged;
+            inputControl = GameObject.Find("Canvas").GetComponentInChildren<InputControl>();
+            inputControl.Init(this);
+            InputCommands.OnListChanged += inputControl.Execute;
+            AssetManager.Instance.InstantiatePrefab("Ground", null, new float3(0, Settings.GroundY, 0));
+            ResetGame();
         }
 
-        if (currentFallingShape != null)
+
+        private void Update()
         {
-            currentFallingShape.LogicUpdate(logicDeltaTime);
-        }
-        else
-        {
-            if (shapeIndex.Value < 0 && IsServer)
+            if (NetworkManager.Singleton.IsServer)
             {
-                shapeIndex.Value = Random.Range(0, Settings.Instance.shapes.Length);
+                // 如果是服务器，则直接使用本地的时间做 tick，将 tick 的结果通过状态同步给客户端
+                LogicUpdateClientRpc(Time.deltaTime);
             }
         }
-    }
 
-    public void WaitForFinalModify(float previous, float current)
-    {
-        if (previous >= 0 && current < 0)
+        [ClientRpc]
+        public void LogicUpdateClientRpc(float logicDeltaTime)
         {
-            if (currentFallingShape != null && !currentFallingShape.CanMove(Vector3.down))
+            if (IsServer && WaitForFinalModify.Value > 0)
             {
-                currentFallingShape.isStopped = true;
+                WaitForFinalModify.Value -= logicDeltaTime;
             }
-        }
-    }
 
-    static List<int> DeletedRowPositions = new List<int>();
-    static Dictionary<Color, int> Colors = new Dictionary<Color, int>();
-
-    public void CheckDeleteLine()
-    {
-        // 获得场景中所有的 TetrisCollider 组件
-        var allTetrisColliders = AllShapes.SelectMany(shape => shape.blocks).ToArray();
-        // 将它们按照 y 坐标分组
-        var groupedColliders = allTetrisColliders.GroupBy(colliderComponent => (int)math.round(colliderComponent.transform.position.y));
-        // 将 groupedColliders 按 y 从小到大排列
-        groupedColliders = groupedColliders.OrderBy(group => group.Key);
-        DeletedRowPositions.Clear();
-        Colors.Clear();
-        foreach (var group in groupedColliders)
-        {
-            // 如果有一组的数量等于 CellWidth 则将这一组 TetrisCollider 移除
-            if (group.Count() == Settings.CellWidth)
+            if (gameEnd || waitDeleteLine)
             {
-                DeletedRowPositions.Add(group.Key);
-                waitDeleteLine = true;
-                foreach (var tetrisCollider in group)
+                return;
+            }
+
+            if (CurrentFallingShape != null)
+            {
+                CurrentFallingShape.LogicUpdate(logicDeltaTime);
+            }
+            else
+            {
+                if (ShapeIndex.Value < 0 && IsServer)
                 {
-                    tetrisCollider.toBeDelete = true;
-                    var meshRenderer = tetrisCollider.GetComponent<MeshRenderer>();
-                    var color = meshRenderer.material.color;
-                    if (Colors.ContainsKey(color))
-                    {
-                        Colors[color]++;
-                    }
-                    else
-                    {
-                        Colors[color] = 1;
-                    }
-
-                    meshRenderer.material = Settings.Instance.deleteLineMaterial;
+                    ShapeIndex.Value = Random.Range(0, Settings.Instance.shapes.Length);
                 }
             }
         }
 
-        if (waitDeleteLine)
+        public void WaitForFinalModifyOnValueChanged(float previous, float current)
         {
-            Color toColor = Colors.OrderByDescending(pair => pair.Value).First().Key;
-            // 将AudioClip分配给AudioSource并播放
-            var deleteLineSource = GetComponent<AudioSource>();
-            if (deleteLineSource == null)
+            if (previous >= 0 && current < 0)
             {
-                deleteLineSource = gameObject.AddComponent<AudioSource>();
-            }
-
-            deleteLineSource.clip = Settings.Instance.deleteLine;
-            deleteLineSource.Play();
-            StartCoroutine(DeleteLine(allTetrisColliders, toColor));
-        }
-    }
-
-    List<GameObject> deleteLineEffects = new List<GameObject>();
-
-    public IEnumerator DeleteLine(TetrisBlock[] allTetrisColliders, Color toColor)
-    {
-        GameObject deleteLineEffectTemplate = AssetManager.Instance.LoadAsset<GameObject>("DeleteLine", this);
-        var visualEffect = deleteLineEffectTemplate.GetComponent<VisualEffect>();
-        var duration = visualEffect.GetFloat("Duration");
-        var gradient = visualEffect.GetGradient("ColorGradient");
-        var gradientColorKeys = gradient.colorKeys;
-        GradientColorKey[] keys = new GradientColorKey[3]
-        {
-            new GradientColorKey(gradientColorKeys[0].color, gradientColorKeys[0].time),
-            new GradientColorKey(gradientColorKeys[1].color, gradientColorKeys[1].time),
-            new GradientColorKey(toColor, gradientColorKeys[2].time),
-        };
-        gradient.SetKeys(keys, gradient.alphaKeys);
-        Assert.IsTrue(gradient.colorKeys[2].color == toColor);
-        visualEffect.SetGradient("ColorGradient", gradient);
-        foreach (var deleteLineEffect in deleteLineEffects)
-        {
-            DestroyImmediate(deleteLineEffect);
-        }
-
-        deleteLineEffects.Clear();
-        Settings.Instance.deleteLineMaterial.SetFloat(Duration, duration);
-        Settings.Instance.deleteLineMaterial.SetColor(ToColor, toColor);
-        // Debug.LogWarning($"DeleteLine effect duration : {duration}");
-        foreach (var line in DeletedRowPositions)
-        {
-            var pos = new Vector3(0, line, -1);
-            var instanceDeleteLineEffect = Instantiate(deleteLineEffectTemplate);
-            instanceDeleteLineEffect.transform.position = pos;
-            deleteLineEffects.Add(instanceDeleteLineEffect);
-            ++haveDeleteLineCount;
-        }
-
-        float animationTime = 0;
-        while (animationTime <= duration)
-        {
-            animationTime += Time.deltaTime;
-            Settings.Instance.deleteLineMaterial.SetFloat(AnimationTime, animationTime);
-            yield return null;
-        }
-
-
-        OnDeleteAnimationComplete(allTetrisColliders);
-
-
-        waitDeleteLine = false;
-    }
-
-    public void OnDeleteAnimationComplete(TetrisBlock[] allTetrisColliders)
-    {
-        foreach (var tetrisCollider in allTetrisColliders)
-        {
-            if (tetrisCollider.toBeDelete)
-            {
-                tetrisCollider.belongsTo.blocks.Remove(tetrisCollider);
-                DestroyImmediate(tetrisCollider.gameObject);
+                if (CurrentFallingShape != null && !CurrentFallingShape.CanMove(-Settings.Up))
+                {
+                    CurrentFallingShape.IsStopped = true;
+                }
             }
         }
 
-        // 对所有行进行统计，统计在删除一行以后，原来的行需要向下位移的数量，统计位移数量要按照 groupedColliders 中 group.Key 的值，如果当前行位置大于 group.Key 值则下移一个单位
-        if (DeletedRowPositions.Count > 0)
+        static readonly List<int> DeletedRowPositions = new List<int>();
+        static readonly Dictionary<Color, int> Colors = new Dictionary<Color, int>();
+
+        public void CheckDeleteLine()
+        {
+            // 获得场景中所有的 TetrisCollider 组件
+            var allTetrisColliders = AllShapes.SelectMany(shape => shape.blocks).ToArray();
+            // 将它们按照 y 坐标分组
+            var groupedColliders = allTetrisColliders.GroupBy(colliderComponent => (int)math.round(colliderComponent.transform.position.y));
+            // 将 groupedColliders 按 y 从小到大排列
+            groupedColliders = groupedColliders.OrderBy(group => group.Key);
+            DeletedRowPositions.Clear();
+            Colors.Clear();
+            foreach (var group in groupedColliders)
+            {
+                // 如果有一组的数量等于 CellWidth 则将这一组 TetrisCollider 移除
+                if (group.Count() == Settings.Width)
+                {
+                    DeletedRowPositions.Add(group.Key);
+                    waitDeleteLine = true;
+                    foreach (var tetrisCollider in group)
+                    {
+                        tetrisCollider.toBeDelete = true;
+                        var meshRenderer = tetrisCollider.GetComponent<MeshRenderer>();
+                        var color = meshRenderer.material.color;
+                        if (Colors.ContainsKey(color))
+                        {
+                            Colors[color]++;
+                        }
+                        else
+                        {
+                            Colors[color] = 1;
+                        }
+
+                        meshRenderer.material = Settings.Instance.deleteLineMaterial;
+                    }
+                }
+            }
+
+            if (waitDeleteLine)
+            {
+                Color toColor = Colors.OrderByDescending(pair => pair.Value).First().Key;
+                // 将AudioClip分配给AudioSource并播放
+                var deleteLineSource = GetComponent<AudioSource>();
+                if (deleteLineSource == null)
+                {
+                    deleteLineSource = gameObject.AddComponent<AudioSource>();
+                }
+
+                deleteLineSource.clip = Settings.Instance.deleteLine;
+                deleteLineSource.Play();
+                StartCoroutine(DeleteLine(allTetrisColliders, toColor));
+            }
+        }
+
+        List<GameObject> deleteLineEffects = new List<GameObject>();
+
+        public IEnumerator DeleteLine(TetrisBlock[] allTetrisColliders, Color toColor)
+        {
+            GameObject deleteLineEffectTemplate = AssetManager.Instance.LoadAsset<GameObject>("DeleteLine", this);
+            var visualEffect = deleteLineEffectTemplate.GetComponent<VisualEffect>();
+            var duration = visualEffect.GetFloat("Duration");
+            var gradient = visualEffect.GetGradient("ColorGradient");
+            var gradientColorKeys = gradient.colorKeys;
+            GradientColorKey[] keys = new GradientColorKey[]
+            {
+                new GradientColorKey(gradientColorKeys[0].color, gradientColorKeys[0].time),
+                new GradientColorKey(gradientColorKeys[1].color, gradientColorKeys[1].time),
+                new GradientColorKey(toColor, gradientColorKeys[2].time),
+            };
+            gradient.SetKeys(keys, gradient.alphaKeys);
+            Assert.IsTrue(gradient.colorKeys[2].color == toColor);
+            visualEffect.SetGradient("ColorGradient", gradient);
+            foreach (var deleteLineEffect in deleteLineEffects)
+            {
+                DestroyImmediate(deleteLineEffect);
+            }
+
+            deleteLineEffects.Clear();
+            Settings.Instance.deleteLineMaterial.SetFloat(Duration, duration);
+            Settings.Instance.deleteLineMaterial.SetColor(ToColor, toColor);
+            // Debug.LogWarning($"DeleteLine effect duration : {duration}");
+            foreach (var line in DeletedRowPositions)
+            {
+                var pos = new float3(0, line, -1);
+                var instanceDeleteLineEffect = Instantiate(deleteLineEffectTemplate);
+                instanceDeleteLineEffect.transform.position = pos;
+                deleteLineEffects.Add(instanceDeleteLineEffect);
+                ++haveDeleteLineCount;
+            }
+
+            float animationTime = 0;
+            while (animationTime <= duration)
+            {
+                animationTime += Time.deltaTime;
+                Settings.Instance.deleteLineMaterial.SetFloat(AnimationTime, animationTime);
+                yield return null;
+            }
+
+
+            OnDeleteAnimationComplete(allTetrisColliders);
+
+
+            waitDeleteLine = false;
+        }
+
+        public void OnDeleteAnimationComplete(TetrisBlock[] allTetrisColliders)
         {
             foreach (var tetrisCollider in allTetrisColliders)
             {
-                if (tetrisCollider == null || !tetrisCollider.CompareTag("StoppedTetrisShape"))
+                if (tetrisCollider.toBeDelete)
                 {
-                    continue;
+                    tetrisCollider.belongsTo.blocks.Remove(tetrisCollider);
+                    DestroyImmediate(tetrisCollider.gameObject);
                 }
+            }
 
-                var position = tetrisCollider.transform.position;
-                var rowY = (int)math.round(position.y);
-                var count = DeletedRowPositions.Count(deletedRowY => deletedRowY < rowY);
-                if (count > 0)
+            // 对所有行进行统计，统计在删除一行以后，原来的行需要向下位移的数量，统计位移数量要按照 groupedColliders 中 group.Key 的值，如果当前行位置大于 group.Key 值则下移一个单位
+            if (DeletedRowPositions.Count > 0)
+            {
+                foreach (var tetrisCollider in allTetrisColliders)
                 {
-                    position += Vector3.down * count;
-                    tetrisCollider.transform.position = position;
+                    if (tetrisCollider == null || !tetrisCollider.CompareTag("StoppedTetrisShape"))
+                    {
+                        continue;
+                    }
+
+                    float3 position = tetrisCollider.transform.position;
+                    var rowY = (int)math.round(position.y);
+                    var count = DeletedRowPositions.Count(deletedRowY => deletedRowY < rowY);
+                    if (count > 0)
+                    {
+                        position += -Settings.Up * count;
+                        tetrisCollider.transform.position = position;
+                    }
                 }
+            }
+
+            // 删除那些 colliders 已经为空的 TetrisShape
+            foreach (var tetrisShape in AllShapes)
+            {
+                if (tetrisShape.blocks.Count == 0)
+                {
+                    DestroyImmediate(tetrisShape.gameObject);
+                }
+            }
+
+            inputControl.deleteLineCount.text = $"{math.min(999, haveDeleteLineCount)}";
+        }
+
+        public void DropATetrisShape(int previousShapeIndex, int currentShapeIndex)
+        {
+            Debug.LogWarning($"DropATetrisShape : {previousShapeIndex} -> {currentShapeIndex}");
+            if (currentShapeIndex < 0)
+            {
+                return;
+            }
+
+            if (CurrentFallingShape != null)
+            {
+                DelayDropShapeServerRpc();
+                return;
+            }
+
+            Assert.IsTrue(currentShapeIndex < Settings.Instance.shapes.Length);
+            CurrentFallingShape = CreateShape(currentShapeIndex);
+            // Debug.LogWarning($"DropATetrisShape : {tetrisShape}", tetrisShape);
+            PredictionShape = CreateShape(currentShapeIndex, true);
+            Physics.SyncTransforms();
+            PredictionShape.UpdatePredictor(CurrentFallingShape);
+            if (IsOwner)
+            {
+                DoneDropATetrisShapeServerRpc();
             }
         }
 
-        // 删除那些 colliders 已经为空的 TetrisShape
-        foreach (var tetrisShape in AllShapes)
+        [ServerRpc]
+        public void DelayDropShapeServerRpc(ServerRpcParams rpcParams = default)
         {
-            if (tetrisShape.blocks.Count == 0)
+            ShapeIndex.Value = ShapeIndex.Value;
+            ShapeIndex.SetDirty(true);
+        }
+
+        [ServerRpc]
+        public void DoneDropATetrisShapeServerRpc(ServerRpcParams rpcParams = default)
+        {
+            ShapeIndex.Value = -1;
+        }
+
+        public TetrisShape CreateShape(int inShapeIndex, bool isPredictor = false)
+        {
+            var shapeSetting = Settings.Instance.shapes[inShapeIndex];
+            var tetrisShape = new GameObject($"TetrisShape_{shapeSetting.baseName}");
+            tetrisShape.name = $"{tetrisShape.name}_{tetrisShape.GetInstanceID()}";
+            var tetrisShapeComponent = tetrisShape.AddComponent<TetrisShape>();
+            tetrisShapeComponent.Init(this);
+            shapeData = shapeSetting.blockPosition;
+            var component = shapeSetting.basic;
+            foreach (float2 pos in shapeData)
+            {
+                GameObject block = Instantiate(component, tetrisShape.transform);
+                block.transform.localScale = new float3(Settings.BlockScale);
+                block.transform.localPosition = new float3(pos, Settings.UnitSize);
+                block.transform.SetParent(tetrisShape.transform, true);
+                var tetrisBlock = block.AddComponent<TetrisBlock>();
+                tetrisBlock.Init();
+                tetrisBlock.belongsTo = tetrisShapeComponent;
+                tetrisShapeComponent.blocks.Add(tetrisBlock);
+            }
+
+            tetrisShape.transform.localScale = new float3(Settings.UnitSize);
+            // 设置 tetrisShape 的世界坐标位置在 CellWidth 中心和 CellHeight 的高度位置
+            var startPositionOffset = shapeSetting.startPositionOffset;
+            tetrisShape.transform.position = new float3(startPositionOffset.x, Settings.Height * Settings.UnitSize + startPositionOffset.y, isPredictor ? 1 : 0);
+            tetrisShapeComponent.bornPos = tetrisShape.transform.position;
+            tetrisShapeComponent.RotateThreshold = shapeSetting.rotateThreshold;
+
+            if (isPredictor)
+            {
+                tetrisShape.name = $"{tetrisShape.name}_Predictor";
+                tetrisShapeComponent.isPredictor = true;
+                var defaultColor = tetrisShapeComponent.blocks[0].GetComponent<MeshRenderer>().material.GetColor(Color1);
+                Settings.Instance.predictorMaterial.SetColor(Color1, defaultColor);
+                Settings.Instance.predictorMaterial.SetFloat(Alpha, 0.4f);
+                foreach (var colliderComponent in tetrisShapeComponent.blocks)
+                {
+                    var meshRenderer = colliderComponent.GetComponent<MeshRenderer>();
+                    meshRenderer.material = Settings.Instance.predictorMaterial;
+                }
+            }
+
+            return tetrisShapeComponent;
+        }
+
+        public void ResetGame()
+        {
+            // Debug.LogWarning("Reset");
+            haveDeleteLineCount = 0;
+            inputControl.deleteLineCount.text = $"{math.min(999, haveDeleteLineCount)}";
+            isPausing = false;
+            gameEnd = false;
+            if (PredictionShape != null)
+            {
+                DestroyImmediate(PredictionShape.gameObject);
+            }
+
+            PredictionShape = null;
+            foreach (var tetrisShape in AllShapes)
             {
                 DestroyImmediate(tetrisShape.gameObject);
             }
+
+            CurrentFallingShape = null;
+            Physics.SyncTransforms();
         }
 
-        InputControl.deleteLineCount.text = $"{math.min(999, haveDeleteLineCount)}";
-    }
+        public bool isPausing;
+        private static readonly int Color1 = Shader.PropertyToID("_Color");
+        private static readonly int Alpha = Shader.PropertyToID("_Alpha");
+        private static readonly int AnimationTime = Shader.PropertyToID("_AnimationTime");
+        private static readonly int Duration = Shader.PropertyToID("_Duration");
+        private static readonly int ToColor = Shader.PropertyToID("_ToColor");
 
-    public void DropATetrisShape(int previousShapeIndex, int currentShapeIndex)
-    {
-        Debug.LogWarning($"DropATetrisShape : {previousShapeIndex} -> {currentShapeIndex}");
-        if (currentShapeIndex < 0)
+
+        public void Pause()
         {
-            return;
+            isPausing = !isPausing;
+            Time.timeScale = isPausing ? 0 : 1;
         }
-
-        if (currentFallingShape != null)
-        {
-            DelayDropShapeServerRpc();
-            return;
-        }
-
-        Assert.IsTrue(currentShapeIndex < Settings.Instance.shapes.Length);
-        currentFallingShape = CreateShape(currentShapeIndex);
-        // Debug.LogWarning($"DropATetrisShape : {tetrisShape}", tetrisShape);
-        predictionShape = CreateShape(currentShapeIndex, true);
-        Physics.SyncTransforms();
-        predictionShape.UpdatePredictor(currentFallingShape);
-        // if (!IsServer)
-        // {
-        DoneDropATetrisShapeServerRpc();
-        // }
-    }
-
-    [ServerRpc]
-    public void DelayDropShapeServerRpc(ServerRpcParams rpcParams = default)
-    {
-        shapeIndex.Value = shapeIndex.Value;
-        shapeIndex.SetDirty(true);
-    }
-
-    [ServerRpc]
-    public void DoneDropATetrisShapeServerRpc(ServerRpcParams rpcParams = default)
-    {
-        shapeIndex.Value = -1;
-    }
-
-    public TetrisShape CreateShape(int inShapeIndex, bool isPredictor = false)
-    {
-        var shapeSetting = Settings.Instance.shapes[inShapeIndex];
-        var tetrisShape = new GameObject($"TetrisShape_{shapeSetting.baseName}");
-        tetrisShape.name = $"{tetrisShape.name}_{tetrisShape.GetInstanceID()}";
-        var tetrisShapeComponent = tetrisShape.AddComponent<TetrisShape>();
-        tetrisShapeComponent.Init(this);
-        shapeData = shapeSetting.blockPosition;
-        var component = shapeSetting.basic;
-        foreach (Vector2 pos in shapeData)
-        {
-            GameObject block = Instantiate(component, tetrisShape.transform);
-            block.transform.localScale = new Vector3(0.5f, 0.5f, 0.5f);
-            block.transform.localPosition = pos;
-            block.transform.SetParent(tetrisShape.transform, true);
-            var tetrisBlock = block.AddComponent<TetrisBlock>();
-            tetrisBlock.Init();
-            tetrisBlock.belongsTo = tetrisShapeComponent;
-            tetrisShapeComponent.blocks.Add(tetrisBlock);
-        }
-
-        // 设置 tetrisShape 的世界坐标位置在 CellWidth 中心和 CellHeight 的高度位置
-        var startPositionOffset = shapeSetting.startPositionOffset;
-        tetrisShape.transform.position = new Vector3(startPositionOffset.x, Settings.CellHeight + startPositionOffset.y, isPredictor ? 1 : 0);
-        tetrisShapeComponent.bornPos = tetrisShape.transform.position;
-        tetrisShapeComponent.RotateThreshold = shapeSetting.rotateThreshold;
-
-        if (isPredictor)
-        {
-            tetrisShape.name = $"{tetrisShape.name}_Predictor";
-            tetrisShapeComponent.isPredictor = true;
-            var defaultColor = tetrisShapeComponent.blocks[0].GetComponent<MeshRenderer>().material.GetColor(Color1);
-            Settings.Instance.predictorMaterial.SetColor(Color1, defaultColor);
-            Settings.Instance.predictorMaterial.SetFloat(Alpha, 0.4f);
-            foreach (var colliderComponent in tetrisShapeComponent.blocks)
-            {
-                var meshRenderer = colliderComponent.GetComponent<MeshRenderer>();
-                meshRenderer.material = Settings.Instance.predictorMaterial;
-            }
-        }
-
-        return tetrisShapeComponent;
-    }
-
-    public void ResetGame()
-    {
-        // Debug.LogWarning("Reset");
-        haveDeleteLineCount = 0;
-        InputControl.deleteLineCount.text = $"{math.min(999, haveDeleteLineCount)}";
-        IsPausing = false;
-        GameEnd = false;
-        if (predictionShape != null)
-        {
-            DestroyImmediate(predictionShape.gameObject);
-        }
-
-        predictionShape = null;
-        foreach (var tetrisShape in AllShapes)
-        {
-            DestroyImmediate(tetrisShape.gameObject);
-        }
-
-        currentFallingShape = null;
-        Physics.SyncTransforms();
-    }
-
-    public bool IsPausing;
-    private static readonly int Color1 = Shader.PropertyToID("_Color");
-    private static readonly int Alpha = Shader.PropertyToID("_Alpha");
-    private static readonly int AnimationTime = Shader.PropertyToID("_AnimationTime");
-    private static readonly int Duration = Shader.PropertyToID("_Duration");
-    private static readonly int ToColor = Shader.PropertyToID("_ToColor");
-
-
-    public void Pause()
-    {
-        IsPausing = !IsPausing;
-        Time.timeScale = IsPausing ? 0 : 1;
     }
 }
