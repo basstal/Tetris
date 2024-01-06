@@ -1,6 +1,7 @@
 ﻿using System;
 using Unity.Mathematics;
 using UnityEngine;
+using UnityEngine.Serialization;
 using Whiterice;
 
 namespace Tetris.Scripts
@@ -19,33 +20,33 @@ namespace Tetris.Scripts
     public class Settings : ScriptableObject
 
     {
-        public const int Width = 20;
-        public const int Height = 20;
-        public const float BlockScale = 0.5f;
-        public const float UnitSize = 0.5f;
-        public const float GroundY = -8;
-        public const float HalfUnitSize = UnitSize / 2;
-        public static readonly float3 Right = new(UnitSize, 0, 0);
-        public static readonly float3 Up = new(0, UnitSize, 0);
-        public static readonly float LeftLimit = -Width / 2f * UnitSize + HalfUnitSize; // 设置左边界
-        public static readonly float RightLimit = Width / 2f * UnitSize + HalfUnitSize; // 设置右边界
+        public int width = 20;
+        public int height = 20;
+        public float blockScale = 0.5f;
+        public float unitSize = 0.5f;
+        public float groundY = -8;
+        public float HalfUnitSize => unitSize / 2;
+        public float3 Right => new(unitSize, 0, 0);
+        public float3 Up => new(0, unitSize, 0);
+        public float LeftLimit => -width / 2f * unitSize + HalfUnitSize; // 设置左边界
+        public float RightLimit => width / 2f * unitSize + HalfUnitSize; // 设置右边界
         public TetrisShapeSetting[] shapes; // 这应该是一个正方形的预制体，表示基础的方块单元
         public Material predictorMaterial;
         public Material deleteLineMaterial;
         public AudioClip deleteLine;
 
-        private static Settings instance;
+        private static Settings _instance;
 
         public static Settings Instance
         {
             get
             {
-                if (instance == null)
+                if (_instance == null)
                 {
-                    instance = AssetManager.Instance.LoadAsset<Settings>("Settings", null);
+                    _instance = AssetManager.Instance.LoadAsset<Settings>("Settings", null);
                 }
 
-                return instance;
+                return _instance;
             }
         }
         // [Button]

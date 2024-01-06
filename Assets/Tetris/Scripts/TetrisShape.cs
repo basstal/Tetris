@@ -14,7 +14,7 @@ namespace Tetris.Scripts
         public const float Intervals = 1;
 
         public float intervalCounter;
-        private bool isStopped;
+        private bool _isStopped;
         public float3 bornPos;
         public List<TetrisBlock> blocks = new List<TetrisBlock>();
         [NonSerialized] public int RotateThreshold;
@@ -24,12 +24,12 @@ namespace Tetris.Scripts
 
         public bool IsStopped
         {
-            get => isStopped;
+            get => _isStopped;
             set
             {
                 // Debug.LogWarning($"Stopped name :{name}");
-                bool beStopped = value != isStopped;
-                isStopped = value;
+                bool beStopped = value != _isStopped;
+                _isStopped = value;
                 // Debug.LogWarning($"beStopped : {beStopped}");
                 if (beStopped)
                 {
@@ -47,7 +47,7 @@ namespace Tetris.Scripts
                         player.CurrentFallingShape = null;
                     }
 
-                    Debug.LogWarning($"change tag with object {name}");
+                    // Debug.LogWarning($"change tag with object {name}");
                     // 将它的所有 BoxCollider 组件的 gameObject 的 tag 设置为 "StoppedTetrisShape"
                     foreach (var boxCollider in GetComponentsInChildren<BoxCollider>())
                     {
@@ -97,7 +97,7 @@ namespace Tetris.Scripts
             if (minDistance > 0)
             {
                 var position = transform2.position;
-                position += (Vector3)(new float3(0, -1, 0) * (minDistance - Settings.HalfUnitSize)); // 0.5f为Box的半高，确保方块底部与目标表面对齐
+                position += (Vector3)(new float3(0, -1, 0) * (minDistance - Settings.Instance.HalfUnitSize)); // 0.5f为Box的半高，确保方块底部与目标表面对齐
                 position.z = 1;
                 transform2.position = position;
             }
@@ -105,12 +105,12 @@ namespace Tetris.Scripts
 
         public void DownOneCell()
         {
-            if (!CanMove(-Settings.Up))
+            if (!CanMove(-Settings.Instance.Up))
             {
                 return;
             }
 
-            transform.position += (Vector3)(-Settings.Up);
+            transform.position += (Vector3)(-Settings.Instance.Up);
         }
 
         public Bounds MaxBounds
@@ -207,11 +207,11 @@ namespace Tetris.Scripts
             // 2. 对于旋转后的子物体，找出那些其 X 坐标超出左/右界限的
             foreach (BoxCollider block in childBlocks)
             {
-                if (block.transform.position.x <= Settings.LeftLimit)
+                if (block.transform.position.x <= Settings.Instance.LeftLimit)
                 {
                     uniqueOutOfBoundX.Add(block.transform.position.x);
                 }
-                else if (block.transform.position.x >= Settings.RightLimit)
+                else if (block.transform.position.x >= Settings.Instance.RightLimit)
                 {
                     uniqueOutOfBoundX.Add(block.transform.position.x);
                 }
@@ -221,15 +221,15 @@ namespace Tetris.Scripts
             // 3. 根据找到的唯一的 X 坐标数量来推挤方块
             if (uniqueOutOfBoundX.Count > 0)
             {
-                if (uniqueOutOfBoundX.Min() <= Settings.LeftLimit)
+                if (uniqueOutOfBoundX.Min() <= Settings.Instance.LeftLimit)
                 {
                     // Debug.LogWarning($"Push right for {finalOutOfBoundX.Count} units due to min.x : {finalOutOfBoundX.Min()}");
-                    trans.position += (Vector3)(Settings.Right * uniqueOutOfBoundX.Count);
+                    trans.position += (Vector3)(Settings.Instance.Right * uniqueOutOfBoundX.Count);
                 }
-                else if (uniqueOutOfBoundX.Max() >= Settings.RightLimit)
+                else if (uniqueOutOfBoundX.Max() >= Settings.Instance.RightLimit)
                 {
                     // Debug.LogWarning($"Push left for {finalOutOfBoundX.Count} units due to max.x : {finalOutOfBoundX.Max()}");
-                    trans.position += (Vector3)(-Settings.Right * uniqueOutOfBoundX.Count);
+                    trans.position += (Vector3)(-Settings.Instance.Right * uniqueOutOfBoundX.Count);
                 }
             }
         }

@@ -24,14 +24,14 @@ namespace Tetris.Scripts
 
 
         // private field to store move action reference
-        private InputAction leftAction;
-        private InputAction rightAction;
-        private InputAction downAction;
-        private InputAction fastDownAction;
-        private InputAction rotateAction;
-        private InputAction resetAction;
+        private InputAction _leftAction;
+        private InputAction _rightAction;
+        private InputAction _downAction;
+        private InputAction _fastDownAction;
+        private InputAction _rotateAction;
+        private InputAction _resetAction;
 
-        private Player player;
+        private Player _player;
 
         public void Execute(NetworkListEvent<int> current)
         {
@@ -72,31 +72,31 @@ namespace Tetris.Scripts
 
         public void Init(Player inPlayer)
         {
-            this.player = inPlayer;
+            this._player = inPlayer;
             if (NetworkManager.Singleton.IsServer)
             {
                 // find the "move" action, and keep the reference to it, for use in Update
                 var gameplayMap = actions.FindActionMap("gameplay");
-                leftAction = gameplayMap.FindAction("left");
-                leftAction.performed += _ => { this.player.InputCommands.Add((int)InputCommand.MoveLeft); };
-                rightAction = gameplayMap.FindAction("right");
-                rightAction.performed += _ => { this.player.InputCommands.Add((int)InputCommand.MoveRight); };
-                downAction = gameplayMap.FindAction("down");
-                downAction.performed += _ => { this.player.InputCommands.Add((int)InputCommand.MoveDown); };
-                fastDownAction = gameplayMap.FindAction("fastDown");
-                fastDownAction.performed += _ => { this.player.InputCommands.Add((int)InputCommand.FastDown); };
-                rotateAction = gameplayMap.FindAction("rotate");
-                rotateAction.performed += _ => { this.player.InputCommands.Add((int)InputCommand.Rotate); };
-                resetAction = gameplayMap.FindAction("reset");
-                resetAction.performed += _ => { this.player.InputCommands.Add((int)InputCommand.ResetGame); };
+                _leftAction = gameplayMap.FindAction("left");
+                _leftAction.performed += _ => { this._player.InputCommands.Add((int)InputCommand.MoveLeft); };
+                _rightAction = gameplayMap.FindAction("right");
+                _rightAction.performed += _ => { this._player.InputCommands.Add((int)InputCommand.MoveRight); };
+                _downAction = gameplayMap.FindAction("down");
+                _downAction.performed += _ => { this._player.InputCommands.Add((int)InputCommand.MoveDown); };
+                _fastDownAction = gameplayMap.FindAction("fastDown");
+                _fastDownAction.performed += _ => { this._player.InputCommands.Add((int)InputCommand.FastDown); };
+                _rotateAction = gameplayMap.FindAction("rotate");
+                _rotateAction.performed += _ => { this._player.InputCommands.Add((int)InputCommand.Rotate); };
+                _resetAction = gameplayMap.FindAction("reset");
+                _resetAction.performed += _ => { this._player.InputCommands.Add((int)InputCommand.ResetGame); };
                 // 为按钮绑定事件
-                leftButton.onClick.AddListener(() => { this.player.InputCommands.Add((int)InputCommand.MoveLeft); });
-                rightButton.onClick.AddListener(() => { this.player.InputCommands.Add((int)InputCommand.MoveRight); });
-                downButton.onClick.AddListener(() => { this.player.InputCommands.Add((int)InputCommand.MoveDown); });
-                upButton.onClick.AddListener(() => { this.player.InputCommands.Add((int)InputCommand.FastDown); });
-                resetButton.onClick.AddListener(() => { this.player.InputCommands.Add((int)InputCommand.ResetGame); });
-                rotateButton.onClick.AddListener(() => { this.player.InputCommands.Add((int)InputCommand.Rotate); });
-                pauseButton.onClick.AddListener(() => { this.player.InputCommands.Add((int)InputCommand.Pause); });
+                leftButton.onClick.AddListener(() => { this._player.InputCommands.Add((int)InputCommand.MoveLeft); });
+                rightButton.onClick.AddListener(() => { this._player.InputCommands.Add((int)InputCommand.MoveRight); });
+                downButton.onClick.AddListener(() => { this._player.InputCommands.Add((int)InputCommand.MoveDown); });
+                upButton.onClick.AddListener(() => { this._player.InputCommands.Add((int)InputCommand.FastDown); });
+                resetButton.onClick.AddListener(() => { this._player.InputCommands.Add((int)InputCommand.ResetGame); });
+                rotateButton.onClick.AddListener(() => { this._player.InputCommands.Add((int)InputCommand.Rotate); });
+                pauseButton.onClick.AddListener(() => { this._player.InputCommands.Add((int)InputCommand.Pause); });
             }
         }
 
@@ -112,62 +112,62 @@ namespace Tetris.Scripts
 
         public void ResetGame()
         {
-            player.ResetGame();
+            _player.ResetGame();
         }
 
         public void Pause()
         {
-            player.Pause();
+            _player.Pause();
         }
 
         public void Rotate()
         {
-            if (player.isPausing)
+            if (_player.isPausing)
             {
                 return;
             }
 
-            if (player.CurrentFallingShape != null)
+            if (_player.CurrentFallingShape != null)
             {
-                player.CurrentFallingShape.Rotate();
-                player.PredictionShape.UpdatePredictor(player.CurrentFallingShape);
+                _player.CurrentFallingShape.Rotate();
+                _player.PredictionShape.UpdatePredictor(_player.CurrentFallingShape);
             }
         }
 
         public void MoveLeft()
         {
-            if (player.isPausing)
+            if (_player.isPausing)
             {
                 return;
             }
 
-            if (player.CurrentFallingShape != null)
+            if (_player.CurrentFallingShape != null)
             {
                 // 如果移动后的左边界没有超过游戏的左边界，并且目标位置没有其他方块，执行移动操作
-                var minX = player.CurrentFallingShape.MaxBounds.min.x - Settings.UnitSize;
-                if ((minX > Settings.LeftLimit || Mathf.Approximately(minX, Settings.LeftLimit)) && player.CurrentFallingShape.CanMove(-Settings.Right))
+                var minX = _player.CurrentFallingShape.MaxBounds.min.x - Settings.Instance.unitSize;
+                if ((minX > Settings.Instance.LeftLimit || Mathf.Approximately(minX, Settings.Instance.LeftLimit)) && _player.CurrentFallingShape.CanMove(-Settings.Instance.Right))
                 {
-                    player.CurrentFallingShape.transform.position += (Vector3)(-Settings.Right);
-                    player.PredictionShape.UpdatePredictor(player.CurrentFallingShape);
+                    _player.CurrentFallingShape.transform.position += (Vector3)(-Settings.Instance.Right);
+                    _player.PredictionShape.UpdatePredictor(_player.CurrentFallingShape);
                 }
             }
         }
 
         public void MoveRight()
         {
-            if (player.isPausing)
+            if (_player.isPausing)
             {
                 return;
             }
 
-            if (player.CurrentFallingShape != null)
+            if (_player.CurrentFallingShape != null)
             {
                 // 如果移动后的右边界没有超过游戏的右边界，并且目标位置没有其他方块，执行移动操作
-                var maxX = player.CurrentFallingShape.MaxBounds.max.x + Settings.UnitSize;
-                if ((maxX <= Settings.RightLimit || Mathf.Approximately(maxX, Settings.RightLimit)) && player.CurrentFallingShape.CanMove(Settings.Right))
+                var maxX = _player.CurrentFallingShape.MaxBounds.max.x + Settings.Instance.unitSize;
+                if ((maxX <= Settings.Instance.RightLimit || Mathf.Approximately(maxX, Settings.Instance.RightLimit)) && _player.CurrentFallingShape.CanMove(Settings.Instance.Right))
                 {
-                    player.CurrentFallingShape.transform.position += (Vector3)(Settings.Right);
-                    player.PredictionShape.UpdatePredictor(player.CurrentFallingShape);
+                    _player.CurrentFallingShape.transform.position += (Vector3)(Settings.Instance.Right);
+                    _player.PredictionShape.UpdatePredictor(_player.CurrentFallingShape);
                 }
             }
         }
@@ -175,40 +175,40 @@ namespace Tetris.Scripts
 
         public void MoveDown()
         {
-            if (player.isPausing)
+            if (_player.isPausing)
             {
                 return;
             }
 
-            if (player.CurrentFallingShape == null || !player.CurrentFallingShape.CanMove(-Settings.Up))
+            if (_player.CurrentFallingShape == null || !_player.CurrentFallingShape.CanMove(-Settings.Instance.Up))
             {
                 return;
             }
 
-            player.CurrentFallingShape.transform.position += (Vector3)(-Settings.Up);
-            player.CurrentFallingShape.intervalCounter = 0;
+            _player.CurrentFallingShape.transform.position += (Vector3)(-Settings.Instance.Up);
+            _player.CurrentFallingShape.intervalCounter = 0;
         }
 
 
         public void FastDown()
         {
-            if (player.isPausing)
+            if (_player.isPausing)
             {
                 return;
             }
 
-            if (player.CurrentFallingShape == null)
+            if (_player.CurrentFallingShape == null)
             {
                 return;
             }
 
-            var minDistance = FindFastDownDistance(player.CurrentFallingShape);
+            var minDistance = FindFastDownDistance(_player.CurrentFallingShape);
             if (minDistance > 0)
             {
-                player.CurrentFallingShape.transform.position += (Vector3)(new float3(0, -1, 0) * (minDistance - Settings.HalfUnitSize)); // 0.5f为Box的半高，确保方块底部与目标表面对齐
+                _player.CurrentFallingShape.transform.position += (Vector3)(new float3(0, -1, 0) * (minDistance - Settings.Instance.HalfUnitSize)); // 0.5f为Box的半高，确保方块底部与目标表面对齐
                 Physics.SyncTransforms();
                 // Debug.LogWarning($" from fast down");
-                player.CurrentFallingShape.IsStopped = true;
+                _player.CurrentFallingShape.IsStopped = true;
             }
         }
 
@@ -219,7 +219,7 @@ namespace Tetris.Scripts
             foreach (TetrisBlock blockCollider in shape.blocks)
             {
                 // 从每个方块的中心发出射线
-                RaycastHit[] hits = Physics.RaycastAll(blockCollider.transform.position, -Settings.Up);
+                RaycastHit[] hits = Physics.RaycastAll(blockCollider.transform.position, -Settings.Instance.Up);
 
                 foreach (RaycastHit hit in hits)
                 {

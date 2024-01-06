@@ -40,7 +40,7 @@ namespace Tetris.Scripts
 
         public bool CheckContactGroundOrOtherShape(Vector3 direction)
         {
-            float distanceToCheck = 0.1f + Settings.UnitSize; //稍微大于 UnitSize，以确保它检测到即将到来的碰撞
+            float distanceToCheck = 0.1f + Settings.Instance.unitSize; //稍微大于 UnitSize，以确保它检测到即将到来的碰撞
             RaycastHit[] allHits = Physics.RaycastAll(transform.position, direction, distanceToCheck);
 
             if (allHits.Length > 0)

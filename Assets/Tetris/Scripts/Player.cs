@@ -14,7 +14,7 @@ namespace Tetris.Scripts
 {
     public class Player : NetworkBehaviour
     {
-        private float2[] shapeData; // 当前形状的数据
+        private float2[] _shapeData; // 当前形状的数据
 
 
         [HideInInspector] public InputControl inputControl;
@@ -47,7 +47,7 @@ namespace Tetris.Scripts
             inputControl = GameObject.Find("Canvas").GetComponentInChildren<InputControl>();
             inputControl.Init(this);
             InputCommands.OnListChanged += inputControl.Execute;
-            AssetManager.Instance.InstantiatePrefab("Ground", null, new float3(0, Settings.GroundY, 0));
+            AssetManager.Instance.InstantiatePrefab("Ground", null, new float3(0, Settings.Instance.groundY, 0));
             ResetGame();
         }
 
@@ -91,7 +91,7 @@ namespace Tetris.Scripts
         {
             if (previous >= 0 && current < 0)
             {
-                if (CurrentFallingShape != null && !CurrentFallingShape.CanMove(-Settings.Up))
+                if (CurrentFallingShape != null && !CurrentFallingShape.CanMove(-Settings.Instance.Up))
                 {
                     CurrentFallingShape.IsStopped = true;
                 }
@@ -106,15 +106,17 @@ namespace Tetris.Scripts
             // 获得场景中所有的 TetrisCollider 组件
             var allTetrisColliders = AllShapes.SelectMany(shape => shape.blocks).ToArray();
             // 将它们按照 y 坐标分组
-            var groupedColliders = allTetrisColliders.GroupBy(colliderComponent => (int)math.round(colliderComponent.transform.position.y));
+            var groupedColliders = allTetrisColliders.GroupBy(colliderComponent => (int)math.round(colliderComponent.transform.position.y * 4));
             // 将 groupedColliders 按 y 从小到大排列
             groupedColliders = groupedColliders.OrderBy(group => group.Key);
             DeletedRowPositions.Clear();
             Colors.Clear();
+            var width = Settings.Instance.width;
+            var deleteLineCount = width;
             foreach (var group in groupedColliders)
             {
                 // 如果有一组的数量等于 CellWidth 则将这一组 TetrisCollider 移除
-                if (group.Count() == Settings.Width)
+                if (group.Count() == deleteLineCount)
                 {
                     DeletedRowPositions.Add(group.Key);
                     waitDeleteLine = true;
@@ -153,7 +155,7 @@ namespace Tetris.Scripts
             }
         }
 
-        List<GameObject> deleteLineEffects = new List<GameObject>();
+        List<GameObject> _deleteLineEffects = new List<GameObject>();
 
         public IEnumerator DeleteLine(TetrisBlock[] allTetrisColliders, Color toColor)
         {
@@ -171,12 +173,12 @@ namespace Tetris.Scripts
             gradient.SetKeys(keys, gradient.alphaKeys);
             Assert.IsTrue(gradient.colorKeys[2].color == toColor);
             visualEffect.SetGradient("ColorGradient", gradient);
-            foreach (var deleteLineEffect in deleteLineEffects)
+            foreach (var deleteLineEffect in _deleteLineEffects)
             {
                 DestroyImmediate(deleteLineEffect);
             }
 
-            deleteLineEffects.Clear();
+            _deleteLineEffects.Clear();
             Settings.Instance.deleteLineMaterial.SetFloat(Duration, duration);
             Settings.Instance.deleteLineMaterial.SetColor(ToColor, toColor);
             // Debug.LogWarning($"DeleteLine effect duration : {duration}");
@@ -185,7 +187,7 @@ namespace Tetris.Scripts
                 var pos = new float3(0, line, -1);
                 var instanceDeleteLineEffect = Instantiate(deleteLineEffectTemplate);
                 instanceDeleteLineEffect.transform.position = pos;
-                deleteLineEffects.Add(instanceDeleteLineEffect);
+                _deleteLineEffects.Add(instanceDeleteLineEffect);
                 ++haveDeleteLineCount;
             }
 
@@ -230,7 +232,7 @@ namespace Tetris.Scripts
                     var count = DeletedRowPositions.Count(deletedRowY => deletedRowY < rowY);
                     if (count > 0)
                     {
-                        position += -Settings.Up * count;
+                        position += -Settings.Instance.Up * count;
                         tetrisCollider.transform.position = position;
                     }
                 }
@@ -250,7 +252,7 @@ namespace Tetris.Scripts
 
         public void DropATetrisShape(int previousShapeIndex, int currentShapeIndex)
         {
-            Debug.LogWarning($"DropATetrisShape : {previousShapeIndex} -> {currentShapeIndex}");
+            // Debug.LogWarning($"DropATetrisShape : {previousShapeIndex} -> {currentShapeIndex}");
             if (currentShapeIndex < 0)
             {
                 return;
@@ -294,13 +296,13 @@ namespace Tetris.Scripts
             tetrisShape.name = $"{tetrisShape.name}_{tetrisShape.GetInstanceID()}";
             var tetrisShapeComponent = tetrisShape.AddComponent<TetrisShape>();
             tetrisShapeComponent.Init(this);
-            shapeData = shapeSetting.blockPosition;
+            _shapeData = shapeSetting.blockPosition;
             var component = shapeSetting.basic;
-            foreach (float2 pos in shapeData)
+            foreach (float2 pos in _shapeData)
             {
                 GameObject block = Instantiate(component, tetrisShape.transform);
-                block.transform.localScale = new float3(Settings.BlockScale);
-                block.transform.localPosition = new float3(pos, Settings.UnitSize);
+                block.transform.localScale = new float3(Settings.Instance.blockScale);
+                block.transform.localPosition = new float3(pos, Settings.Instance.unitSize);
                 block.transform.SetParent(tetrisShape.transform, true);
                 var tetrisBlock = block.AddComponent<TetrisBlock>();
                 tetrisBlock.Init();
@@ -308,10 +310,10 @@ namespace Tetris.Scripts
                 tetrisShapeComponent.blocks.Add(tetrisBlock);
             }
 
-            tetrisShape.transform.localScale = new float3(Settings.UnitSize);
+            tetrisShape.transform.localScale = new float3(Settings.Instance.unitSize);
             // 设置 tetrisShape 的世界坐标位置在 CellWidth 中心和 CellHeight 的高度位置
-            var startPositionOffset = shapeSetting.startPositionOffset;
-            tetrisShape.transform.position = new float3(startPositionOffset.x, Settings.Height * Settings.UnitSize + startPositionOffset.y, isPredictor ? 1 : 0);
+            var startPositionOffset = shapeSetting.startPositionOffset * Settings.Instance.blockScale;
+            tetrisShape.transform.position = new float3(startPositionOffset.x, Settings.Instance.height * Settings.Instance.unitSize + startPositionOffset.y, isPredictor ? 1 : 0);
             tetrisShapeComponent.bornPos = tetrisShape.transform.position;
             tetrisShapeComponent.RotateThreshold = shapeSetting.rotateThreshold;
 
